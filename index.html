@@ -1,60 +1,66 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Obras">
+<meta name="apple-mobile-web-app-title" content="Construction">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1f3a5f">
-<title>Obras Diego</title>
+<meta name="theme-color" content="#2e3236">
+<title>Construction Management</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--tx:#1b2430;--mut:#6b7686;--pri:#1f5fa8;--ok:#1e8a4c;--bad:#c0392b;--warn:#b4660b;--bd:#e3e7ee}
+:root{--bg:#f3f4f5;--card:#fff;--tx:#23272b;--mut:#6e757c;--pri:#33383d;--soft:#e7e9eb;--bd:#e1e4e7;--bad:#a33a3a;--hdr:#2e3236}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
-header{position:sticky;top:0;background:#1f3a5f;color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;justify-content:space-between;align-items:center;z-index:5}
-header h1{font-size:18px;margin:0}
-header button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:15px;margin-left:6px}
-header .izq{display:flex;align-items:center;gap:10px}header .izq button{margin-left:0;font-size:18px;padding:4px 10px}
+svg.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+header{position:sticky;top:0;background:var(--hdr);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+header button{background:none;color:#fff;border:0;padding:6px;display:flex;align-items:center}
+header .izq{display:flex;align-items:center;gap:8px}
+header svg.ic{width:26px;height:26px}
 main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
-nav button .i{font-size:20px}
-nav button.on{color:var(--pri);font-weight:600}
+nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:11px;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button.on{color:var(--tx);font-weight:600}
 .card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1 1 130px}
 label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
 input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:16px;background:#fff;color:var(--tx);font-family:inherit}
 textarea{min-height:180px;line-height:1.4}
 .btn{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:600;background:var(--pri);color:#fff;cursor:pointer}
-.btn.sec{background:#e8eef6;color:var(--pri)}.btn.bad{background:#fdecea;color:var(--bad)}.btn.ok{background:var(--ok)}
-.btn.sm{padding:7px 10px;font-size:13px;flex:0 0 auto}.btn.full{width:100%}
+.btn.sec{background:var(--soft);color:var(--tx)}.btn.bad{background:#f4e6e6;color:var(--bad)}
+.btn.sm{padding:7px 10px;font-size:13px;flex:0 0 auto}.btn.full{width:100%}.btn.lg{padding:14px;font-size:16px}
+.fab{width:46px;height:46px;border-radius:50%;background:var(--pri);color:#fff;border:0;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.18)}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
 .stat{background:var(--card);border-radius:12px;padding:10px}
 .stat b{display:block;font-size:16px;margin-top:2px}.stat span{font-size:12px;color:var(--mut)}
 .item{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
 .t{font-weight:600}.s{font-size:13px;color:var(--mut);margin-top:2px}
-.prev{font-size:14px;margin-top:6px;white-space:pre-wrap;color:#3a4552}
+.prev{font-size:14px;margin-top:6px;white-space:pre-wrap;color:#3d4247}
 .amt{font-weight:700;white-space:nowrap;text-align:right}
-.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;background:#e8eef6;color:var(--pri);margin-right:4px}
-.tag.p{background:#fff3e0;color:var(--warn)}.tag.g{background:#e6f4ea;color:var(--ok)}.tag.x{background:#eee;color:#777}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;background:var(--soft);color:var(--tx);margin-right:4px}
+.tag.p{background:#fff;border:1px solid var(--bd);color:var(--mut)}.tag.d{background:var(--pri);color:#fff}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:left}
 th{font-size:11px;color:var(--mut);font-weight:600}td.n,th.n{text-align:right;white-space:nowrap}
 tr.tot td{border-top:2px solid var(--tx);font-weight:700}
-.seg{display:flex;background:#e3e7ee;border-radius:10px;padding:3px;margin-bottom:10px}
-.seg button{flex:1;border:0;background:none;padding:8px 4px;border-radius:8px;font-size:13px;color:var(--tx)}.seg button.on{background:#fff;font-weight:600}
+.seg{display:flex;background:var(--soft);border-radius:10px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:none;padding:8px 4px;border-radius:8px;font-size:13px;color:var(--tx)}.seg button.on{background:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet-body{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .sheet h2{margin:0 0 6px;font-size:18px}
-.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1b2430;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;max-width:90%;text-align:center}
+.menu{background:#fff;border-radius:12px;overflow:hidden}
+.menu button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--bd);background:#fff;padding:15px 14px;font-size:16px;color:var(--tx);text-align:left}
+.menu button:last-child{border-bottom:0}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#23272b;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;max-width:90%;text-align:center}
 .empty{text-align:center;color:var(--mut);padding:24px}
-.chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:0 0 auto}
+.chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:0 0 auto;accent-color:var(--pri)}
 .h{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px;gap:8px}.h h2{font-size:16px;margin:0}
 .asis{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
 .asis .nm{flex:1}
@@ -62,19 +68,18 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 .fotos{display:flex;flex-wrap:wrap;gap:8px}
 .foto{position:relative;width:96px;height:96px}
 .foto img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--bd);background:#ddd}
-.foto button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--bad);color:#fff;font-size:12px}
+.foto button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--pri);color:#fff;font-size:12px}
+.addfoto{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:9px 14px;border-radius:10px;background:var(--soft);color:var(--tx);font-size:14px;font-weight:600;cursor:pointer}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal .wd{text-align:center;font-size:11px;color:var(--mut);padding:2px 0}
 .cal .d{background:#fff;border:1px solid var(--bd);border-radius:8px;min-height:54px;padding:4px 5px;font-size:13px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}
 .cal .d .c{font-size:11px;font-weight:600;text-align:right}
-.cal .d.full{background:#e6f4ea;border-color:#bfe3c9}.cal .d.part{background:#fff3e0;border-color:#f3d6a8}
+.cal .d.full{background:#d9dde0;border-color:#c9ced2}.cal .d.part{background:#eef0f1}
 .cal .d.hoy{outline:2px solid var(--pri);outline-offset:-1px}
 .cal .d.vac{background:none;border:0;cursor:default}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chips button{border:1px solid var(--bd);background:#fff;border-radius:16px;padding:7px 11px;font-size:13px;color:var(--tx)}
-.chips button.on{color:#fff;background:var(--ok);border-color:var(--ok)}
-.chips button.on.tar,.chips button.on.par,.chips button.on.exc{background:var(--warn);border-color:var(--warn)}
-.chips button.on.aus{background:var(--bad);border-color:var(--bad)}
+.chips button.on{color:#fff;background:var(--pri);border-color:var(--pri)}
 .dia{padding:10px 0;border-bottom:1px solid var(--bd)}
 #login{max-width:380px;margin:12vh auto;padding:20px}
 </style>
@@ -83,20 +88,20 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 
 <div id="login" hidden>
   <form class="card" onsubmit="event.preventDefault();entrar()">
-    <h2 style="margin-top:0">Obras · Gastos</h2>
-    <label>Correo</label><input id="l_email" type="email" autocomplete="username" autocapitalize="off">
-    <label>Contraseña</label><input id="l_pass" type="password" autocomplete="current-password">
-    <button class="btn full" style="margin-top:14px">Entrar</button>
+    <h2 style="margin-top:0">Construction Management</h2>
+    <label>Email</label><input id="l_email" type="email" autocomplete="username" autocapitalize="off">
+    <label>Password</label><input id="l_pass" type="password" autocomplete="current-password">
+    <button class="btn full" style="margin-top:14px">Sign in</button>
     <div id="l_err" class="s" style="color:var(--bad);margin-top:8px"></div>
   </form>
 </div>
 
 <div id="app" hidden>
   <header>
-    <div class="izq"><button onclick="menu()" aria-label="Menú">☰</button><h1>Obras Diego</h1></div>
-    <div><button onclick="recargar()" aria-label="Actualizar">⟳</button><button onclick="salir()">Salir</button></div>
+    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>Construction Management</h1></div>
+    <button onclick="recargar()" aria-label="Refresh" id="b_ref"></button>
   </header>
-  <main id="view"><div class="empty">Cargando…</div></main>
+  <main id="view"><div class="empty">Loading…</div></main>
   <nav id="nav"></nav>
 </div>
 
@@ -106,19 +111,41 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 const SUPABASE_URL = 'https://unmikmufvkhfxpxijjrc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_XBP4goKYsISElycMXwHr8g_rcve8nW8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const BUCKET = 'suplidores';
 
-const PARTIDAS_SUGERIDAS = ['Materiales','Mano de obra','Subcontratos','Equipos y alquiler','Herramientas','Transporte','Combustible','Electricidad','Plomería','Pintura','Terminaciones','Permisos y trámites','Gastos administrativos'];
-const METODOS = ['Efectivo','Transferencia','Tarjeta','Cheque','Crédito'];
-const BANCOS = ['Banreservas','Banco Popular','BHD','Scotiabank','Banco Santa Cruz','Promerica','Banesco','Banco Caribe','BDI','Banco Vimenca','Banco López de Haro','Banco Lafise','Asociación Popular (APAP)','Asociación Cibao','Asociación La Nacional'];
-// Tarifa diaria según Código de Trabajo (semana de 44 h = 5.5 días; quincena = 23.83/2 días)
+/* ---------- Icons ---------- */
+const ICONS = {
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+  receipt:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.3.2 4 1.8 4.5 4.5"/>',
+  note:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/>',
+  db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  camera:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>',
+  refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 14v6h14v-6"/>',
+  logout:'<path d="M9 4H5v16h4"/><path d="M16 8l4 4-4 4M20 12H10"/>',
+  phone:'<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
+};
+const ic = (n,size) => `<svg class="ic" viewBox="0 0 24 24" ${size?`style="width:${size}px;height:${size}px"`:''}>${ICONS[n]}</svg>`;
+document.getElementById('b_menu').innerHTML = ic('menu');
+document.getElementById('b_ref').innerHTML = ic('refresh');
+
+const CATEGORIES_START = ['Materials','Labor','Subcontracts','Equipment rental','Tools','Transportation','Fuel','Electrical','Plumbing','Painting','Finishes','Permits','Admin expenses'];
+const METHODS = ['Cash','Transfer','Card','Check','Credit'];
+const BANKS = ['Banreservas','Banco Popular','BHD','Scotiabank','Banco Santa Cruz','Promerica','Banesco','Banco Caribe','BDI','Banco Vimenca','Banco López de Haro','Banco Lafise','Asociación Popular (APAP)','Asociación Cibao','Asociación La Nacional'];
+// Daily rate per DR labor code (44 h week = 5.5 days; biweekly = 23.83/2 days)
 const DIAS_PERIODO = {diario:1, semanal:5.5, quincenal:11.915};
-const ESTADOS = [['presente','Presente'],['tardanza','Tardanza'],['parcial','Parcial'],['excusa','Excusa'],['ausente','Faltó']];
+const PAY_LBL = {diario:'Daily', semanal:'Weekly', quincenal:'Biweekly'};
+const STATUS_LBL = {activa:'Active', pausada:'Paused', terminada:'Finished'};
+const ESTADOS = [['presente','Present'],['tardanza','Late'],['parcial','Partial'],['excusa','Excused'],['ausente','Absent']];
 const LBL_ESTADO = Object.fromEntries(ESTADOS);
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const r2 = v => Math.round((Number(v)||0)*100)/100;
-const fmtN = n => Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt = n => 'RD$ ' + fmtN(n);
 const ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const hoy = () => ymd(new Date());
@@ -126,9 +153,10 @@ const sumaDias = (f,n) => { const d=new Date(f+'T12:00:00'); d.setDate(d.getDate
 const fecha = f => { if(!f) return ''; const s=String(f).slice(0,10).split('-'); return `${s[2]}/${s[1]}/${s[0]}`; };
 const sum = (a,f) => a.reduce((s,x)=>s+(Number(f(x))||0),0);
 const num = sel => r2(parseFloat($(sel).value)||0);
+const alnum = v => String(v||'').replace(/[^0-9A-Za-z]/g,'').toUpperCase();
 const nomObra = id => S.obras.find(o=>o.id===id)?.nombre || '';
 const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
-const obraOpts = (sel, blank='— Sin obra —') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+esc(o.estado)+')':''}</option>`).join('');
+const obraOpts = (sel, blank='— No project —') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
 const S = {
   obras:[], gastos:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[],
@@ -138,17 +166,17 @@ const S = {
   fotosTmp:[], fotosDir:'', diaTmp:{}, diaF:''
 };
 
-function toast(m){ const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+function toast(m,ms=2600){ const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); return t; }
 function abrir(html){ $('#sheetBody').innerHTML=html; $('#sheet').hidden=false; $('#sheetBody').scrollTop=0; }
 function cerrar(){ $('#sheet').hidden=true; }
 
-/* ---------- Sesión ---------- */
+/* ---------- Session ---------- */
 async function entrar(){
   $('#l_err').textContent='';
   const {error} = await sb.auth.signInWithPassword({email:$('#l_email').value.trim(), password:$('#l_pass').value});
-  if(error) $('#l_err').textContent = 'No se pudo entrar: revisa el correo y la contraseña.';
+  if(error) $('#l_err').textContent = 'Could not sign in. Check your email and password.';
 }
-async function salir(){ await sb.auth.signOut(); }
+async function salir(){ cerrar(); await sb.auth.signOut(); }
 sb.auth.onAuthStateChange((ev, session) => {
   if(session){
     if(!S.listo){ S.listo=true; $('#login').hidden=true; $('#app').hidden=false; setTimeout(cargar,0); }
@@ -157,13 +185,13 @@ sb.auth.onAuthStateChange((ev, session) => {
   }
 });
 
-/* ---------- Datos ---------- */
+/* ---------- Data ---------- */
 async function cargar(){
   const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas'};
   const keys = Object.keys(tablas);
   const res = await Promise.all(keys.map(k => sb.from(tablas[k]).select('*').range(0,9999)));
   for(let i=0;i<keys.length;i++){
-    if(res[i].error){ toast('Error cargando '+tablas[keys[i]]+': '+res[i].error.message); continue; }
+    if(res[i].error){ toast('Error loading '+tablas[keys[i]]+': '+res[i].error.message); continue; }
     S[keys[i]] = res[i].data || [];
   }
   S.obras.sort((a,b)=>(a.estado==='activa'?0:1)-(b.estado==='activa'?0:1) || a.nombre.localeCompare(b.nombre));
@@ -174,31 +202,38 @@ async function cargar(){
   S.pagos.sort((a,b)=>String(b.fecha_pago).localeCompare(String(a.fecha_pago)));
   render();
 }
-async function recargar(){ await cargar(); toast('Actualizado'); }
+async function recargar(){ await cargar(); toast('Updated'); }
 async function guardar(t,id,d){
   const {error} = id ? await sb.from(t).update(d).eq('id',id) : await sb.from(t).insert(d);
   if(error) return toast('Error: '+error.message);
-  cerrar(); await cargar(); toast('Guardado');
+  cerrar(); await cargar(); toast('Saved');
 }
 async function borrar(t,id){
-  if(!confirm('¿Seguro que quieres borrarlo?')) return;
+  if(!confirm('Are you sure you want to delete it?')) return;
   const {error} = await sb.from(t).delete().eq('id',id);
-  if(error) return toast(error.code==='23503' ? 'No se puede borrar porque tiene registros asociados.' : 'Error: '+error.message);
-  cerrar(); await cargar(); toast('Borrado');
+  if(error) return toast(error.code==='23503' ? 'It cannot be deleted because other records use it.' : 'Error: '+error.message);
+  cerrar(); await cargar(); toast('Deleted');
 }
 
-/* ---------- Navegación ---------- */
-const TABS=[['inicio','🏠','Inicio'],['gastos','🧾','Gastos'],['nomina','👷','Nómina'],['notas','📝','Notas'],['database','🗂️','Database']];
+/* ---------- Navigation ---------- */
+const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['nomina','users','Payroll'],['notas','note','Notes'],['database','db','Database']];
 function ir(t){ S.tab=t; render(); window.scrollTo(0,0); }
 function render(){
-  $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')"><span class="i">${i}</span>${l}</button>`).join('');
+  $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')">${ic(i)}${l}</button>`).join('');
   $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,database:vDatabase})[S.tab]();
 }
 function seg(opciones, actual, accion){
   return `<div class="seg">${opciones.map(([k,l])=>`<button class="${actual===k?'on':''}" onclick="${accion}('${k}')">${l}</button>`).join('')}</div>`;
 }
+function menu(){
+  abrir(`<div class="menu">
+    <button onclick="pantallaExport()">${ic('export')} Export</button>
+    <button onclick="salir()">${ic('logout')} Log out</button>
+  </div>
+  <button class="btn sec full lg" style="margin-top:12px" onclick="cerrar()">Close</button>`);
+}
 
-/* ---------- Inicio ---------- */
+/* ---------- Home ---------- */
 function vInicio(){
   const m = hoy().slice(0,7);
   const gm = S.gastos.filter(g=>g.fecha?.startsWith(m));
@@ -209,27 +244,27 @@ function vInicio(){
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
   return `
-  <div class="s" style="margin:0 0 6px">Este mes</div>
+  <div class="s" style="margin:0 0 6px">Summary</div>
   <div class="stats">
-    <div class="stat"><span>Gastos de obras</span><b>${fmt(obraM)}</b></div>
-    <div class="stat"><span>Gastos personales</span><b>${fmt(persM)}</b></div>
-    <div class="stat"><span>Nómina pagada</span><b>${fmt(nomM)}</b></div>
-    <div class="stat"><span>ITBIS pagado</span><b>${fmt(itbisM)}</b></div>
+    <div class="stat"><span>Project expenses</span><b>${fmt(obraM)}</b></div>
+    <div class="stat"><span>Personal expenses</span><b>${fmt(persM)}</b></div>
+    <div class="stat"><span>Payroll paid</span><b>${fmt(nomM)}</b></div>
+    <div class="stat"><span>ITBIS paid</span><b>${fmt(itbisM)}</b></div>
   </div>
-  <div class="card"><div class="h"><h2>Balance mes</h2></div>
+  <div class="card"><div class="h"><h2>Monthly balance</h2></div>
   <table>
-    ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmtN(f.g)}</td></tr>`).join('')}
-    ${sinObra?`<tr><td><i>Obra sin asignar</i></td><td class="n">${fmtN(sinObra)}</td></tr>`:''}
-    <tr onclick="verGastos({tipo:'personal',desde:'${m}-01'})"><td>Personal</td><td class="n">${fmtN(persM)}</td></tr>
-    <tr onclick="S.sub='pagos';ir('nomina')"><td>Nómina</td><td class="n">${fmtN(nomM)}</td></tr>
-    <tr class="tot"><td>Total</td><td class="n">${fmtN(obraM+persM+nomM)}</td></tr>
+    ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmt(f.g)}</td></tr>`).join('')}
+    ${sinObra?`<tr><td><i>No project assigned</i></td><td class="n">${fmt(sinObra)}</td></tr>`:''}
+    <tr onclick="verGastos({tipo:'personal',desde:'${m}-01'})"><td>Personal</td><td class="n">${fmt(persM)}</td></tr>
+    <tr onclick="S.sub='pagos';ir('nomina')"><td>Payroll</td><td class="n">${fmt(nomM)}</td></tr>
+    <tr class="tot"><td>Total</td><td class="n">${fmt(obraM+persM+nomM)}</td></tr>
   </table>
   </div>
-  <button class="btn full" onclick="formGasto()">+ Nuevo gasto</button>`;
+  <div style="text-align:center;margin-top:6px"><button class="fab" onclick="formGasto()" aria-label="New expense">${ic('plus',24)}</button></div>`;
 }
 function verGastos(f){ S.f={tipo:'',obra:'',desde:'',hasta:'',q:'',...f}; ir('gastos'); }
 
-/* ---------- Gastos ---------- */
+/* ---------- Expenses ---------- */
 function gastosFiltrados(){
   const f=S.f, q=f.q.toLowerCase();
   return S.gastos.filter(g=>(!f.tipo||g.tipo===f.tipo)&&(!f.obra||g.obra_id===f.obra)&&(!f.desde||g.fecha>=f.desde)&&(!f.hasta||g.fecha<=f.hasta)
@@ -241,69 +276,73 @@ function vGastos(){
   return `
   <div class="card">
     <div class="row">
-      <div><label>Tipo</label><select onchange="setF('tipo',this.value)"><option value="">Todos</option><option value="obra" ${f.tipo==='obra'?'selected':''}>Obra</option><option value="personal" ${f.tipo==='personal'?'selected':''}>Personal</option></select></div>
-      <div><label>Obra</label><select onchange="setF('obra',this.value)">${obraOpts(f.obra,'Todas')}</select></div>
+      <div><label>Type</label><select onchange="setF('tipo',this.value)"><option value="">All</option><option value="obra" ${f.tipo==='obra'?'selected':''}>Project</option><option value="personal" ${f.tipo==='personal'?'selected':''}>Personal</option></select></div>
+      <div><label>Project</label><select onchange="setF('obra',this.value)">${obraOpts(f.obra,'All')}</select></div>
     </div>
     <div class="row">
-      <div><label>Desde</label><input type="date" value="${f.desde}" onchange="setF('desde',this.value)"></div>
-      <div><label>Hasta</label><input type="date" value="${f.hasta}" onchange="setF('hasta',this.value)"></div>
+      <div><label>From</label><input type="date" value="${f.desde}" onchange="setF('desde',this.value)"></div>
+      <div><label>To</label><input type="date" value="${f.hasta}" onchange="setF('hasta',this.value)"></div>
     </div>
-    <label>Buscar</label><input type="search" placeholder="Suplidor, NCF, descripción…" value="${esc(f.q)}" oninput="setF('q',this.value)">
+    <label>Search</label><input type="search" placeholder="Supplier, NCF, description…" value="${esc(f.q)}" oninput="setF('q',this.value)">
   </div>
-  <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ Nuevo gasto</button></div>
-  <div class="row" style="margin-bottom:10px"><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel</button><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF</button></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button></div>
+  <div class="row" style="margin-bottom:4px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel</button></div>
+  <label class="chk" style="margin:6px 0 12px"><input type="checkbox" id="gx_fotos"> Include invoice photos</label>
   <div id="glist">${listaGastos()}</div>`;
 }
 function listaGastos(){
   const gs=gastosFiltrados();
   return gs.map(g=>`<div class="card item" onclick="formGasto('${g.id}')">
-    <div><div class="t">${esc(g.suplidor||g.descripcion||'(sin suplidor)')}</div>
+    <div><div class="t">${esc(g.suplidor||g.descripcion||'(no supplier)')}</div>
       <div class="s">${fecha(g.fecha)}${g.suplidor&&g.descripcion?' · '+esc(g.descripcion):''}</div>
-      <div class="s">${g.tipo==='personal'?'<span class="tag p">Personal</span>':`<span class="tag">${esc(nomObra(g.obra_id)||'Sin obra')}</span>`}${g.partida?`<span class="tag x">${esc(g.partida)}</span>`:''}${g.ncf?' NCF '+esc(g.ncf):''}</div></div>
-    <div class="amt">${fmt(g.monto_total)}${Number(g.itbis)?`<div class="s">ITBIS ${fmtN(g.itbis)}</div>`:''}${Number(g.propina)?`<div class="s">Propina ${fmtN(g.propina)}</div>`:''}</div>
-  </div>`).join('') || '<div class="empty">No hay gastos con estos filtros.</div>';
+      <div class="s">${g.tipo==='personal'?'<span class="tag p">Personal</span>':`<span class="tag">${esc(nomObra(g.obra_id)||'No project')}</span>`}${g.partida?`<span class="tag p">${esc(g.partida)}</span>`:''}${g.ncf?' NCF '+esc(g.ncf):''}${g.fotos?.length?` · ${ic('camera',15)} ${g.fotos.length}`:''}</div></div>
+    <div class="amt">${fmt(g.monto_total)}${Number(g.itbis)?`<div class="s">ITBIS ${fmt(g.itbis)}</div>`:''}${Number(g.propina)?`<div class="s">Tip ${fmt(g.propina)}</div>`:''}</div>
+  </div>`).join('') || '<div class="empty">No expenses match these filters.</div>';
 }
 function formGasto(id){
-  const g = S.gastos.find(x=>x.id===id) || {fecha:hoy(), tipo:S.f.tipo||'obra', obra_id:S.f.obra||'', metodo_pago:''};
+  const g = S.gastos.find(x=>x.id===id) || {fecha:hoy(), tipo:S.f.tipo||'obra', obra_id:S.f.obra||'', metodo_pago:'', fotos:[]};
   const pn = S.partidas.map(p=>p.nombre); if(g.partida && !pn.includes(g.partida)) pn.push(g.partida);
-  const mets = [...METODOS]; if(g.metodo_pago && !mets.includes(g.metodo_pago)) mets.push(g.metodo_pago);
+  const mets = [...METHODS]; if(g.metodo_pago && !mets.includes(g.metodo_pago)) mets.push(g.metodo_pago);
   const lleva = !id || Number(g.itbis)>0;
   const otro = !g.suplidor_id && !!g.suplidor;
-  abrir(`<h2>${id?'Editar':'Nuevo'} gasto</h2>
+  S.fotosTmp=[...(g.fotos||[])]; S.fotosDir='facturas/';
+  abrir(`<h2>${id?'Edit':'New'} expense</h2>
   <div class="row">
-    <div><label>Fecha</label><input type="date" id="g_fecha" value="${g.fecha}"></div>
-    <div><label>Tipo</label><select id="g_tipo" onchange="$('#g_obraw').hidden=this.value!=='obra'"><option value="obra" ${g.tipo==='obra'?'selected':''}>Obra</option><option value="personal" ${g.tipo==='personal'?'selected':''}>Personal</option></select></div>
+    <div><label>Date</label><input type="date" id="g_fecha" value="${g.fecha}"></div>
+    <div><label>Type</label><select id="g_tipo" onchange="$('#g_obraw').hidden=this.value!=='obra'"><option value="obra" ${g.tipo==='obra'?'selected':''}>Project</option><option value="personal" ${g.tipo==='personal'?'selected':''}>Personal</option></select></div>
   </div>
-  <div id="g_obraw" ${g.tipo!=='obra'?'hidden':''}><label>Obra</label><select id="g_obra">${obraOpts(g.obra_id)}</select></div>
-  <label>Descripción</label><input id="g_desc" value="${esc(g.descripcion)}">
+  <div id="g_obraw" ${g.tipo!=='obra'?'hidden':''}><label>Project</label><select id="g_obra">${obraOpts(g.obra_id)}</select></div>
+  <label>Description</label><input id="g_desc" value="${esc(g.descripcion)}">
   <div class="row">
-    <div><label>Suplidor</label><select id="g_supid" onchange="elegirSup()">
-      <option value="">${S.suplidores.length?'— Elegir —':'— Crea suplidores en Database —'}</option>
+    <div><label>Supplier</label><select id="g_supid" onchange="elegirSup()">
+      <option value="">${S.suplidores.length?'— Select —':'— Add suppliers in Database —'}</option>
       ${S.suplidores.map(s=>`<option value="${s.id}" ${s.id===g.suplidor_id?'selected':''}>${esc(s.nombre)}</option>`).join('')}
-      <option value="otro" ${otro?'selected':''}>Otro</option></select>
-      <input id="g_sup" style="margin-top:6px" placeholder="Nombre del suplidor" value="${esc(g.suplidor)}" ${otro?'':'hidden'}></div>
-    <div><label>RNC / Cédula</label><input id="g_rnc" inputmode="numeric" value="${esc(g.rnc)}"></div>
+      <option value="otro" ${otro?'selected':''}>Other</option></select>
+      <input id="g_sup" style="margin-top:6px" placeholder="Supplier name" value="${esc(g.suplidor)}" ${otro?'':'hidden'}></div>
+    <div><label>RNC / ID</label><input id="g_rnc" value="${esc(g.rnc)}"></div>
   </div>
   <div class="row">
     <div><label>NCF</label><input id="g_ncf" autocapitalize="characters" placeholder="B0100000001" value="${esc(g.ncf)}"></div>
-    <div><label>Partida</label><select id="g_part"><option value="">${S.partidas.length?'— Elegir —':'— Crea partidas en Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+    <div><label>Category</label><select id="g_part"><option value="">${S.partidas.length?'— Select —':'— Add categories in Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
   </div>
   <div class="row">
     <label class="chk"><input type="checkbox" id="g_lleva" ${lleva?'checked':''} onchange="calc('sin')"> ITBIS 18%</label>
-    <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> Propina 10%</label>
+    <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> Tip 10%</label>
   </div>
-  <label>Neto</label><input id="g_sin" type="number" inputmode="decimal" step="0.01" value="${g.monto_sin_itbis??''}" oninput="calc('sin')">
+  <label>Net</label><input id="g_sin" type="number" inputmode="decimal" step="0.01" value="${g.monto_sin_itbis??''}" oninput="calc('sin')">
   <div class="row">
     <div><label>ITBIS</label><input id="g_itbis" type="number" inputmode="decimal" step="0.01" value="${g.itbis??''}" oninput="calc('ajuste')"></div>
-    <div><label>Propina</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
+    <div><label>Tip</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
   </div>
-  <label>Bruto</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
-  <label>Método de pago</label><select id="g_met"><option value="">—</option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
+  <label>Gross</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
+  <label>Payment method</label><select id="g_met"><option value="">—</option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
+  ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrar('gastos','${id}')">Borrar</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="guardarGasto('${id||''}')">Guardar</button>
+    ${id?`<button class="btn bad" onclick="borrarGasto('${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardarGasto('${id||''}')">Save</button>
   </div>`);
+  pintarFotos();
 }
 function elegirSup(){
   const v=$('#g_supid').value;
@@ -333,16 +372,26 @@ async function guardarGasto(id){
   const tipo=$('#g_tipo').value, supid=$('#g_supid').value;
   const d={fecha:$('#g_fecha').value||hoy(), tipo, obra_id:tipo==='obra'?($('#g_obra').value||null):null,
     descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(),
-    suplidor_id:(supid&&supid!=='otro')?supid:null, rnc:$('#g_rnc').value.replace(/[^0-9]/g,''),
+    suplidor_id:(supid&&supid!=='otro')?supid:null, rnc:alnum($('#g_rnc').value),
     ncf:$('#g_ncf').value.trim().toUpperCase(), partida:$('#g_part').value,
-    monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value};
-  if(!d.monto_total) return toast('Pon el monto neto o bruto del gasto');
+    monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value,
+    fotos:S.fotosTmp};
+  if(!d.monto_total) return toast('Enter the net or gross amount');
   if(d.ncf){ const dup=S.gastos.find(g=>g.id!==id&&g.ncf===d.ncf&&(g.rnc||'')===d.rnc);
-    if(dup && !confirm(`Ya existe un gasto con ese NCF (${fecha(dup.fecha)}, ${dup.suplidor||''}). ¿Guardar de todos modos?`)) return; }
+    if(dup && !confirm(`An expense with this NCF already exists (${fecha(dup.fecha)}, ${dup.suplidor||''}). Save anyway?`)) return; }
+  await limpiarFotos(S.gastos.find(x=>x.id===id)?.fotos, d.fotos);
   await guardar('gastos',id,d);
 }
+async function borrarGasto(id){
+  const g=S.gastos.find(x=>x.id===id);
+  if(!confirm('Delete this expense?')) return;
+  const {error}=await sb.from('gastos').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  if(g?.fotos?.length) await sb.storage.from(BUCKET).remove(g.fotos);
+  cerrar(); await cargar(); toast('Deleted');
+}
 
-/* ---------- Nómina: asistencia y pagos ---------- */
+/* ---------- Payroll: attendance and payments ---------- */
 const estadoDe = a => !a ? '' : ((!a.estado||a.estado==='presente') && !a.presente) ? 'ausente' : (a.estado||'presente');
 const factorDia = a => { const e=estadoDe(a); return (e==='presente'||e==='tardanza')?1 : e==='parcial'?0.5 : e==='excusa'?(a.excusa_pagada?1:0) : 0; };
 const fue = a => ['presente','tardanza','parcial'].includes(estadoDe(a));
@@ -351,14 +400,14 @@ const pendAdel = id => sum(S.adelantos.filter(a=>a.empleado_id===id&&!a.desconta
 function setSub(k){ S.sub=k; render(); }
 
 function vNomina(){
-  return seg([['asistencia','Asistencia'],['pagos','Pagos']], S.sub, 'setSub') + (S.sub==='pagos' ? vPagos() : vAsistencia());
+  return seg([['asistencia','Attendance'],['pagos','Payments']], S.sub, 'setSub') + (S.sub==='pagos' ? vPagos() : vAsistencia());
 }
 function vAsistencia(){
   const [y,m]=S.calMes.split('-').map(Number);
   const off=(new Date(y,m-1,1).getDay()+6)%7, nd=new Date(y,m,0).getDate();
   const act=S.empleados.filter(e=>e.activo).length;
-  const titulo=new Date(y,m-1,15).toLocaleDateString('es-DO',{month:'long',year:'numeric'});
-  let cel=['L','M','M','J','V','S','D'].map(d=>`<div class="wd">${d}</div>`).join('');
+  const titulo=new Date(y,m-1,15).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  let cel=['M','T','W','T','F','S','S'].map(d=>`<div class="wd">${d}</div>`).join('');
   for(let i=0;i<off;i++) cel+='<div class="d vac"></div>';
   for(let d=1;d<=nd;d++){
     const f=`${S.calMes}-${String(d).padStart(2,'0')}`;
@@ -372,33 +421,33 @@ function vAsistencia(){
     return {e, dias:sum(rs,factorDia), tar:rs.filter(a=>estadoDe(a)==='tardanza').length, falt:rs.filter(a=>estadoDe(a)==='ausente').length};
   });
   return `<div class="card">
-    <div class="h"><button class="btn sm sec" onclick="mesCal(-1)">‹</button><h2 style="text-transform:capitalize">${titulo}</h2><button class="btn sm sec" onclick="mesCal(1)">›</button></div>
+    <div class="h"><button class="btn sm sec" onclick="mesCal(-1)">‹</button><h2>${titulo}</h2><button class="btn sm sec" onclick="mesCal(1)">›</button></div>
     <div class="cal">${cel}</div>
-    <div class="s" style="margin-top:8px">Toca un día para marcar la asistencia.</div></div>
-  ${filas.length?`<div class="card"><div class="h"><h2>Resumen del mes</h2></div>
-    <table><tr><th>Empleado</th><th class="n">Días a pagar</th><th class="n">Tardanzas</th><th class="n">Faltas</th></tr>
+    <div class="s" style="margin-top:8px">Tap a day to mark attendance.</div></div>
+  ${filas.length?`<div class="card"><div class="h"><h2>Month summary</h2></div>
+    <table><tr><th>Employee</th><th class="n">Days to pay</th><th class="n">Late</th><th class="n">Absent</th></tr>
     ${filas.map(f=>`<tr><td>${esc(f.e.nombre)}</td><td class="n">${f.dias}</td><td class="n">${f.tar}</td><td class="n">${f.falt}</td></tr>`).join('')}</table></div>`
-  :'<div class="empty">Agrega empleados en Database para marcar la asistencia.</div>'}`;
+  :'<div class="empty">Add employees in Database to mark attendance.</div>'}`;
 }
 function mesCal(k){ const [y,m]=S.calMes.split('-').map(Number); S.calMes=ymd(new Date(y,m-1+k,1)).slice(0,7); render(); }
 function abrirDia(f){
   const emps=S.empleados.filter(e=>e.activo||S.asistencia.some(a=>a.fecha===f&&a.empleado_id===e.id));
-  if(!emps.length) return toast('Primero agrega empleados en Database');
+  if(!emps.length) return toast('Add employees in Database first');
   S.diaF=f; S.diaTmp={};
   emps.forEach(e=>{ const a=S.asistencia.find(x=>x.fecha===f&&x.empleado_id===e.id);
     S.diaTmp[e.id]={estado:estadoDe(a), he:Number(a?.horas_extra)||0, pag:!!a?.excusa_pagada, motivo:a?.motivo||'', id:a?.id||null}; });
-  const tit=new Date(f+'T12:00:00').toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long'});
-  abrir(`<div class="h"><h2 style="text-transform:capitalize">${tit}</h2><button class="btn sm sec" onclick="diaTodos()">Todos presentes</button></div>
+  const tit=new Date(f+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  abrir(`<div class="h"><h2>${tit}</h2><button class="btn sm sec" onclick="diaTodos()">All present</button></div>
   ${emps.map(e=>`<div class="dia" id="dr_${e.id}">${filaDia(e)}</div>`).join('')}
-  <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancelar</button><button class="btn" onclick="guardarDia()">Guardar</button></div>`);
+  <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancel</button><button class="btn" onclick="guardarDia()">Save</button></div>`);
 }
 function filaDia(e){
   const t=S.diaTmp[e.id];
   return `<div class="t">${esc(e.nombre)}</div>${e.puesto?`<div class="s">${esc(e.puesto)}</div>`:''}
-  <div class="chips">${ESTADOS.map(([k,l])=>`<button class="${t.estado===k?'on '+k.slice(0,3):''}" onclick="marcarDia('${e.id}','${k}')">${l}</button>`).join('')}</div>
-  ${t.estado==='excusa'?`<label class="chk"><input type="checkbox" ${t.pag?'checked':''} onchange="S.diaTmp['${e.id}'].pag=this.checked"> Se paga</label>
-    <input style="margin-top:6px" placeholder="Motivo" value="${esc(t.motivo)}" oninput="S.diaTmp['${e.id}'].motivo=this.value">`:''}
-  ${(t.estado==='presente'||t.estado==='tardanza')?`<div class="row" style="margin-top:6px;align-items:center"><span class="s" style="flex:1 1 auto">Horas extra</span>
+  <div class="chips">${ESTADOS.map(([k,l])=>`<button class="${t.estado===k?'on':''}" onclick="marcarDia('${e.id}','${k}')">${l}</button>`).join('')}</div>
+  ${t.estado==='excusa'?`<label class="chk"><input type="checkbox" ${t.pag?'checked':''} onchange="S.diaTmp['${e.id}'].pag=this.checked"> Paid</label>
+    <input style="margin-top:6px" placeholder="Reason" value="${esc(t.motivo)}" oninput="S.diaTmp['${e.id}'].motivo=this.value">`:''}
+  ${(t.estado==='presente'||t.estado==='tardanza')?`<div class="row" style="margin-top:6px;align-items:center"><span class="s" style="flex:1 1 auto">Overtime hours</span>
     <input type="number" inputmode="decimal" step="0.5" style="flex:0 0 80px;padding:6px" value="${t.he||''}" placeholder="0" oninput="S.diaTmp['${e.id}'].he=parseFloat(this.value)||0"></div>`:''}`;
 }
 function marcarDia(eid,k){
@@ -413,12 +462,12 @@ async function guardarDia(){
   for(const [eid,t] of Object.entries(S.diaTmp)){
     if(!t.estado){ if(t.id) dels.push(t.id); continue; }
     const pag=t.estado==='excusa'&&t.pag, conHE=t.estado==='presente'||t.estado==='tardanza';
-    ups.push({empleado_id:eid, fecha:S.diaF, estado:t.estado, presente:fue({estado:t.estado,presente:true})||pag,
+    ups.push({empleado_id:eid, fecha:S.diaF, estado:t.estado, presente:['presente','tardanza','parcial'].includes(t.estado)||pag,
       horas_extra:conHE?r2(t.he):0, excusa_pagada:pag, motivo:t.estado==='excusa'?(t.motivo.trim()||null):null, obra_id:null});
   }
   if(ups.length){ const {error}=await sb.from('asistencia').upsert(ups,{onConflict:'empleado_id,fecha'}); if(error) return toast('Error: '+error.message); }
   if(dels.length){ const {error}=await sb.from('asistencia').delete().in('id',dels); if(error) return toast('Error: '+error.message); }
-  cerrar(); await cargar(); toast('Asistencia guardada');
+  cerrar(); await cargar(); toast('Attendance saved');
 }
 
 function calcNomina(){
@@ -435,19 +484,19 @@ function vPagos(){
   const filas=calcNomina(), pend=filas.filter(f=>!f.ya);
   const hist=S.pagos.slice(0,40);
   return `<div class="card"><div class="row">
-    <div><label>Desde</label><input type="date" value="${S.nd}" onchange="S.nd=this.value;render()"></div>
-    <div><label>Hasta</label><input type="date" value="${S.nh}" onchange="S.nh=this.value;render()"></div></div>
-    <div class="s" style="margin-top:6px">Se calcula con la asistencia: parcial = medio día, excusa según se pague. Horas extra al 35 % adicional.</div></div>
-  <div class="stats"><div class="stat"><span>Por pagar</span><b>${fmt(sum(pend,f=>f.neto))}</b></div><div class="stat"><span>Empleados</span><b>${pend.length}</b></div></div>
+    <div><label>From</label><input type="date" value="${S.nd}" onchange="S.nd=this.value;render()"></div>
+    <div><label>To</label><input type="date" value="${S.nh}" onchange="S.nh=this.value;render()"></div></div>
+    <div class="s" style="margin-top:6px">Based on attendance: partial = half day, excused depends on whether it is paid. Overtime at +35%.</div></div>
+  <div class="stats"><div class="stat"><span>To pay</span><b>${fmt(sum(pend,f=>f.neto))}</b></div><div class="stat"><span>Employees</span><b>${pend.length}</b></div></div>
   ${filas.map(f=>`<div class="card">
-    <div class="item"><div><div class="t">${esc(f.e.nombre)}</div><div class="s">${f.dias} días × ${fmtN(f.td)}${f.he?` + ${f.he} h extra`:''}</div>
-      ${!f.ya&&f.ad?`<div class="s neg">Adelantos a descontar: ${fmtN(f.ad)}</div>`:''}</div>
-      <div class="amt">${fmt(f.ya?f.ya.neto:f.neto)}${(f.ya?f.ya.descuentos:f.ad)?`<div class="s">antes de adelantos ${fmtN(f.ya?f.ya.bruto:f.bruto)}</div>`:''}</div></div>
-    <div style="margin-top:8px;text-align:right">${f.ya?'<span class="tag g">Pagado</span>':`<button class="btn sm ok" onclick="pagar('${f.e.id}')">Registrar pago</button>`}</div>
-  </div>`).join('') || '<div class="empty">No hay días trabajados en este período.</div>'}
-  ${pend.length>1?`<button class="btn full ok" onclick="pagarTodos()">Registrar pago a todos</button>`:''}
-  <div class="card" style="margin-top:12px"><div class="h"><h2>Pagos registrados</h2></div>
-  ${hist.length?`<table><tr><th>Fecha</th><th>Empleado</th><th class="n">Pagado</th></tr>${hist.map(p=>`<tr><td>${fecha(p.fecha_pago)}</td><td>${esc(nomEmp(p.empleado_id))}</td><td class="n">${fmtN(p.neto)}</td></tr>`).join('')}</table>`:'<div class="empty">Aún no hay pagos.</div>'}</div>`;
+    <div class="item"><div><div class="t">${esc(f.e.nombre)}</div><div class="s">${f.dias} days × ${fmt(f.td)}${f.he?` + ${f.he} h overtime`:''}</div>
+      ${!f.ya&&f.ad?`<div class="s neg">Advances to deduct: ${fmt(f.ad)}</div>`:''}</div>
+      <div class="amt">${fmt(f.ya?f.ya.neto:f.neto)}${(f.ya?f.ya.descuentos:f.ad)?`<div class="s">before advances ${fmt(f.ya?f.ya.bruto:f.bruto)}</div>`:''}</div></div>
+    <div style="margin-top:8px;text-align:right">${f.ya?'<span class="tag d">Paid</span>':`<button class="btn sm" onclick="pagar('${f.e.id}')">Record payment</button>`}</div>
+  </div>`).join('') || '<div class="empty">No days worked in this period.</div>'}
+  ${pend.length>1?`<button class="btn full" onclick="pagarTodos()">Record payment for all</button>`:''}
+  <div class="card" style="margin-top:12px"><div class="h"><h2>Recorded payments</h2></div>
+  ${hist.length?`<table><tr><th>Date</th><th>Employee</th><th class="n">Paid</th></tr>${hist.map(p=>`<tr><td>${fecha(p.fecha_pago)}</td><td>${esc(nomEmp(p.empleado_id))}</td><td class="n">${fmt(p.neto)}</td></tr>`).join('')}</table>`:'<div class="empty">No payments yet.</div>'}</div>`;
 }
 async function pagarUno(f){
   const {error}=await sb.from('pagos_nomina').insert({empleado_id:f.e.id,obra_id:null,desde:S.nd,hasta:S.nh,dias_trabajados:f.dias,bruto:f.bruto,descuentos:f.ad,neto:f.neto,fecha_pago:hoy()});
@@ -457,58 +506,58 @@ async function pagarUno(f){
 }
 async function pagar(eid){
   const f=calcNomina().find(x=>x.e.id===eid&&!x.ya); if(!f) return;
-  if(!confirm(`Registrar pago a ${f.e.nombre} por ${fmt(f.neto)}?`)) return;
-  if(await pagarUno(f)){ await cargar(); toast('Pago registrado'); }
+  if(!confirm(`Record payment to ${f.e.nombre} for ${fmt(f.neto)}?`)) return;
+  if(await pagarUno(f)){ await cargar(); toast('Payment recorded'); }
 }
 async function pagarTodos(){
   const pend=calcNomina().filter(f=>!f.ya);
-  if(!confirm(`Registrar ${pend.length} pagos por un total de ${fmt(sum(pend,f=>f.neto))}?`)) return;
+  if(!confirm(`Record ${pend.length} payments totaling ${fmt(sum(pend,f=>f.neto))}?`)) return;
   for(const f of pend) await pagarUno(f);
-  await cargar(); toast('Pagos registrados');
+  await cargar(); toast('Payments recorded');
 }
 
-/* ---------- Notas ---------- */
+/* ---------- Notes ---------- */
 function vNotas(){
   const f=S.fn;
   const ns=S.notas.filter(n=>f==='todas'||(f==='gen'?!n.obra_id:n.obra_id===f)).sort((a,b)=>String(b.creado).localeCompare(String(a.creado)));
   return `<div class="row" style="margin-bottom:10px">
-    <select onchange="S.fn=this.value;render()"><option value="todas">Todas las notas</option><option value="gen" ${f==='gen'?'selected':''}>Generales</option>${S.obras.map(o=>`<option value="${o.id}" ${f===o.id?'selected':''}>${esc(o.nombre)}</option>`).join('')}</select>
-    <button class="btn" style="flex:0 0 auto" onclick="formNota()">+ Nota</button></div>
+    <select onchange="S.fn=this.value;render()"><option value="todas">All notes</option><option value="gen" ${f==='gen'?'selected':''}>General</option>${S.obras.map(o=>`<option value="${o.id}" ${f===o.id?'selected':''}>${esc(o.nombre)}</option>`).join('')}</select>
+    <button class="btn" style="flex:0 0 auto" onclick="formNota()">+ Note</button></div>
   ${ns.map(n=>`<div class="card" onclick="formNota('${n.id}')">
-    <div class="t">${esc(n.titulo||'(sin título)')}</div>
+    <div class="t">${esc(n.titulo||'(untitled)')}</div>
     <div class="s">${n.obra_id?`<span class="tag">${esc(nomObra(n.obra_id))}</span>`:'<span class="tag p">General</span>'} ${fecha(n.creado)}</div>
-    <div class="prev">${esc((n.contenido||'').slice(0,220))}${(n.contenido||'').length>220?'…':''}</div></div>`).join('') || '<div class="empty">No hay notas todavía.</div>'}`;
+    <div class="prev">${esc((n.contenido||'').slice(0,220))}${(n.contenido||'').length>220?'…':''}</div></div>`).join('') || '<div class="empty">No notes yet.</div>'}`;
 }
 function formNota(id){
   const n=S.notas.find(x=>x.id===id)||{obra_id:(S.fn!=='todas'&&S.fn!=='gen')?S.fn:''};
-  abrir(`<h2>${id?'Editar':'Nueva'} nota</h2>
-  <label>Título</label><input id="n_tit" value="${esc(n.titulo)}">
-  <label>Obra</label><select id="n_obra">${obraOpts(n.obra_id,'— Nota general —')}</select>
-  <label>Contenido</label><textarea id="n_txt">${esc(n.contenido)}</textarea>
+  abrir(`<h2>${id?'Edit':'New'} note</h2>
+  <label>Title</label><input id="n_tit" value="${esc(n.titulo)}">
+  <label>Project</label><select id="n_obra">${obraOpts(n.obra_id,'— General note —')}</select>
+  <label>Content</label><textarea id="n_txt">${esc(n.contenido)}</textarea>
   <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrar('notas','${id}')">Borrar</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="guardar('notas','${id||''}',{titulo:$('#n_tit').value.trim(),obra_id:$('#n_obra').value||null,contenido:$('#n_txt').value})">Guardar</button>
+    ${id?`<button class="btn bad" onclick="borrar('notas','${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardar('notas','${id||''}',{titulo:$('#n_tit').value.trim(),obra_id:$('#n_obra').value||null,contenido:$('#n_txt').value})">Save</button>
   </div>`);
 }
 
 /* ---------- Database ---------- */
 function setDb(k){ S.db=k; render(); }
 function vDatabase(){
-  return seg([['suplidores','Suplidores'],['empleados','Empleados'],['obras','Obras'],['partidas','Partidas']], S.db, 'setDb')
+  return seg([['suplidores','Suppliers'],['empleados','Employees'],['obras','Projects'],['partidas','Categories']], S.db, 'setDb')
     + ({suplidores:vSuplidores,empleados:vEmpleados,obras:vObras,partidas:vPartidas})[S.db]();
 }
 
-/* Fotos (suplidores y empleados) */
-const bloqueFotos = () => `<label>Fotos</label><div id="s_fotos" class="fotos"></div>
-  <label class="btn sec" style="display:inline-block;margin-top:6px;color:var(--pri);font-size:14px">📷 Agregar foto<input type="file" accept="image/*" multiple hidden onchange="subirFotos(this)"></label>
+/* Photos (suppliers, employees, invoices) */
+const bloqueFotos = () => `<label>Photos</label><div id="s_fotos" class="fotos"></div>
+  <label class="addfoto">${ic('camera',20)} Add photo<input type="file" accept="image/*" multiple hidden onchange="subirFotos(this)"></label>
   <span id="s_subiendo" class="s"></span>`;
 async function pintarFotos(){
   const box=$('#s_fotos'); if(!box) return;
-  if(!S.fotosTmp.length){ box.innerHTML='<div class="s">Sin fotos</div>'; return; }
-  const {data}=await sb.storage.from('suplidores').createSignedUrls(S.fotosTmp,3600);
+  if(!S.fotosTmp.length){ box.innerHTML='<div class="s">No photos</div>'; return; }
+  const {data}=await sb.storage.from(BUCKET).createSignedUrls(S.fotosTmp,3600);
   box.innerHTML=S.fotosTmp.map((p,i)=>{const u=data?.[i]?.signedUrl||'';
-    return `<div class="foto"><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="foto"></a><button onclick="quitarFoto(${i})">✕</button></div>`}).join('');
+    return `<div class="foto"><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="photo"></a><button onclick="quitarFoto(${i})">✕</button></div>`}).join('');
 }
 function reducir(file){
   return new Promise((ok,mal)=>{
@@ -516,38 +565,38 @@ function reducir(file){
     img.onload=()=>{const max=1600,k=Math.min(1,max/Math.max(img.width,img.height));
       const c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
       c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
-      c.toBlob(b=>b?ok(b):mal(new Error('No se pudo procesar la foto')),'image/jpeg',0.82);};
-    img.onerror=()=>{URL.revokeObjectURL(url); mal(new Error('Formato de foto no soportado'));};
+      c.toBlob(b=>b?ok(b):mal(new Error('Could not process the photo')),'image/jpeg',0.82);};
+    img.onerror=()=>{URL.revokeObjectURL(url); mal(new Error('Unsupported photo format'));};
     img.src=url;
   });
 }
 async function subirFotos(input){
   const files=[...input.files]; input.value='';
   for(const f of files){
-    $('#s_subiendo').textContent=' Subiendo…';
+    $('#s_subiendo').textContent=' Uploading…';
     try{
       const blob=await reducir(f);
       const path=`${S.fotosDir}${crypto.randomUUID()}.jpg`;
-      const {error}=await sb.storage.from('suplidores').upload(path,blob,{contentType:'image/jpeg'});
+      const {error}=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});
       if(error) throw error;
       S.fotosTmp.push(path);
-    }catch(e){ toast('Error subiendo foto: '+e.message); }
+    }catch(e){ toast('Photo upload error: '+e.message); }
   }
-  $('#s_subiendo').textContent=' Recuerda tocar Guardar.';
+  $('#s_subiendo').textContent=' Remember to tap Save.';
   pintarFotos();
 }
 function quitarFoto(i){ S.fotosTmp.splice(i,1); pintarFotos(); }
 async function limpiarFotos(viejas, nuevas){
   const quitar=(viejas||[]).filter(p=>!nuevas.includes(p));
-  if(quitar.length) await sb.storage.from('suplidores').remove(quitar);
+  if(quitar.length) await sb.storage.from(BUCKET).remove(quitar);
 }
 
-/* Suplidores */
+/* Suppliers */
 const compradoA = s => sum(S.gastos.filter(g=>g.suplidor_id===s.id||(!g.suplidor_id&&g.suplidor&&g.suplidor===s.nombre)),g=>g.monto_total);
 function vSuplidores(){
   return `<div class="row" style="margin-bottom:10px">
-    <input type="search" placeholder="Buscar suplidor…" value="${esc(S.qs)}" oninput="S.qs=this.value;$('#slist').innerHTML=listaSup()">
-    <button class="btn" style="flex:0 0 auto" onclick="formSup()">+ Suplidor</button></div>
+    <input type="search" placeholder="Search supplier…" value="${esc(S.qs)}" oninput="S.qs=this.value;$('#slist').innerHTML=listaSup()">
+    <button class="btn" style="flex:0 0 auto" onclick="formSup()">+ Supplier</button></div>
   <div id="slist">${listaSup()}</div>`;
 }
 function listaSup(){
@@ -555,198 +604,206 @@ function listaSup(){
   const ss=S.suplidores.filter(s=>!q||[s.nombre,s.documento,s.telefono,s.profesion,s.notas].join(' ').toLowerCase().includes(q));
   return ss.map(s=>`<div class="card item" onclick="formSup('${s.id}')">
     <div><div class="t">${esc(s.nombre)}</div>
-      <div class="s"><span class="tag ${s.tipo==='empresa'?'':'p'}">${s.tipo==='empresa'?'Empresa':'Particular'}</span>${s.tipo==='particular'&&s.profesion?esc(s.profesion)+' · ':''}${s.documento?(s.tipo==='empresa'?'RNC ':'Céd. ')+esc(s.documento):''}</div>
-      ${s.telefono?`<div class="s">📞 ${esc(s.telefono)}</div>`:''}</div>
-    <div class="amt">${fmt(compradoA(s))}<div class="s">comprado</div></div>
-  </div>`).join('') || '<div class="empty">No hay suplidores todavía.</div>';
+      <div class="s"><span class="tag ${s.tipo==='empresa'?'':'p'}">${s.tipo==='empresa'?'Company':'Individual'}</span>${s.tipo==='particular'&&s.profesion?esc(s.profesion)+' · ':''}${s.documento?(s.tipo==='empresa'?'RNC ':'ID ')+esc(s.documento):''}</div>
+      ${s.telefono?`<div class="s">${ic('phone',14)} ${esc(s.telefono)}</div>`:''}</div>
+    <div class="amt">${fmt(compradoA(s))}<div class="s">purchased</div></div>
+  </div>`).join('') || '<div class="empty">No suppliers yet.</div>';
 }
-function tipoSup(v){ $('#s_doclbl').textContent=v==='empresa'?'RNC':'Cédula'; $('#s_profw').hidden=v!=='particular'; }
+function tipoSup(v){ $('#s_doclbl').textContent=v==='empresa'?'RNC':'ID / Passport'; $('#s_profw').hidden=v!=='particular'; }
 function formSup(id){
   const s=S.suplidores.find(x=>x.id===id)||{tipo:'empresa',fotos:[]};
   S.fotosTmp=[...(s.fotos||[])]; S.fotosDir='';
   const gs=id?S.gastos.filter(g=>g.suplidor_id===id).slice(0,10):[];
-  abrir(`<h2>${id?'Editar':'Nuevo'} suplidor</h2>
-  <label>Nombre</label><input id="s_nom" value="${esc(s.nombre)}">
+  abrir(`<h2>${id?'Edit':'New'} supplier</h2>
+  <label>Name</label><input id="s_nom" value="${esc(s.nombre)}">
   <div class="row">
-    <div><label>Tipo</label><select id="s_tipo" onchange="tipoSup(this.value)">
-      <option value="empresa" ${s.tipo==='empresa'?'selected':''}>Empresa</option><option value="particular" ${s.tipo==='particular'?'selected':''}>Particular</option></select></div>
-    <div><label id="s_doclbl">${s.tipo==='empresa'?'RNC':'Cédula'}</label><input id="s_doc" inputmode="numeric" value="${esc(s.documento)}"></div>
+    <div><label>Type</label><select id="s_tipo" onchange="tipoSup(this.value)">
+      <option value="empresa" ${s.tipo==='empresa'?'selected':''}>Company</option><option value="particular" ${s.tipo==='particular'?'selected':''}>Individual</option></select></div>
+    <div><label id="s_doclbl">${s.tipo==='empresa'?'RNC':'ID / Passport'}</label><input id="s_doc" value="${esc(s.documento)}"></div>
   </div>
-  <div id="s_profw" ${s.tipo==='particular'?'':'hidden'}><label>Profesión</label><input id="s_prof" value="${esc(s.profesion)}"></div>
+  <div id="s_profw" ${s.tipo==='particular'?'':'hidden'}><label>Profession</label><input id="s_prof" value="${esc(s.profesion)}"></div>
   <div class="row">
-    <div><label>Teléfono</label><input id="s_tel" type="tel" value="${esc(s.telefono)}"></div>
-    <div><label>Correo</label><input id="s_cor" type="email" autocapitalize="off" value="${esc(s.correo)}"></div>
+    <div><label>Phone</label><input id="s_tel" type="tel" value="${esc(s.telefono)}"></div>
+    <div><label>Email</label><input id="s_cor" type="email" autocapitalize="off" value="${esc(s.correo)}"></div>
   </div>
-  <label>Dirección</label><input id="s_dir" value="${esc(s.direccion)}">
+  <label>Address</label><input id="s_dir" value="${esc(s.direccion)}">
   <div class="row">
-    <div><label>Banco</label><input id="s_ban" list="dl_ban" value="${esc(s.banco)}"></div>
-    <div><label>Número de cuenta</label><input id="s_cta" inputmode="numeric" value="${esc(s.cuenta_banco)}"></div>
+    <div><label>Bank</label><input id="s_ban" list="dl_ban" value="${esc(s.banco)}"></div>
+    <div><label>Account number</label><input id="s_cta" inputmode="numeric" value="${esc(s.cuenta_banco)}"></div>
   </div>
-  <datalist id="dl_ban">${BANCOS.map(b=>`<option value="${b}">`).join('')}</datalist>
-  <label>Notas</label><textarea id="s_not" style="min-height:90px">${esc(s.notas)}</textarea>
+  <datalist id="dl_ban">${BANKS.map(b=>`<option value="${b}">`).join('')}</datalist>
+  <label>Notes</label><textarea id="s_not" style="min-height:90px">${esc(s.notas)}</textarea>
   ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrarSup('${id}')">Borrar</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="guardarSup('${id||''}')">Guardar</button>
+    ${id?`<button class="btn bad" onclick="borrarSup('${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardarSup('${id||''}')">Save</button>
   </div>
-  ${gs.length?`<div class="card" style="margin-top:16px"><div class="h"><h2>Últimos gastos</h2></div>
-    ${gs.map(g=>`<div class="asis"><div class="nm">${fecha(g.fecha)} · ${esc(g.descripcion||nomObra(g.obra_id)||'')}</div><b>${fmtN(g.monto_total)}</b></div>`).join('')}</div>`:''}`);
+  ${gs.length?`<div class="card" style="margin-top:16px"><div class="h"><h2>Recent expenses</h2></div>
+    ${gs.map(g=>`<div class="asis"><div class="nm">${fecha(g.fecha)} · ${esc(g.descripcion||nomObra(g.obra_id)||'')}</div><b>${fmt(g.monto_total)}</b></div>`).join('')}</div>`:''}`);
   pintarFotos();
 }
 async function guardarSup(id){
-  const tipo=$('#s_tipo').value;
-  const d={nombre:$('#s_nom').value.trim(), tipo, documento:$('#s_doc').value.replace(/[^0-9]/g,''),
+  const tipo=$('#s_tipo').value, raw=$('#s_doc').value;
+  const d={nombre:$('#s_nom').value.trim(), tipo, documento:tipo==='empresa'?raw.replace(/[^0-9]/g,''):alnum(raw),
     profesion:tipo==='particular'?($('#s_prof').value.trim()||null):null,
     telefono:$('#s_tel').value.trim(), correo:$('#s_cor').value.trim(), direccion:$('#s_dir').value.trim(),
     banco:$('#s_ban').value.trim(), cuenta_banco:$('#s_cta').value.trim(), notas:$('#s_not').value, fotos:S.fotosTmp};
-  if(!d.nombre) return toast('Pon el nombre del suplidor');
-  const largo=tipo==='empresa'?[9,11]:[11];
-  if(d.documento && !largo.includes(d.documento.length) && !confirm(`El ${tipo==='empresa'?'RNC':'número de cédula'} tiene ${d.documento.length} dígitos. ¿Guardar de todos modos?`)) return;
+  if(!d.nombre) return toast('Enter the supplier name');
+  if(tipo==='empresa' && d.documento && ![9,11].includes(d.documento.length) && !confirm(`The RNC has ${d.documento.length} digits. Save anyway?`)) return;
   await limpiarFotos(S.suplidores.find(x=>x.id===id)?.fotos, d.fotos);
   await guardar('suplidores',id,d);
 }
 async function borrarSup(id){
   const s=S.suplidores.find(x=>x.id===id);
-  if(S.gastos.some(g=>g.suplidor_id===id)) return toast('Este suplidor tiene gastos registrados; no se puede borrar.');
-  if(!confirm(`¿Borrar a ${s.nombre}?`)) return;
+  if(S.gastos.some(g=>g.suplidor_id===id)) return toast('This supplier has recorded expenses and cannot be deleted.');
+  if(!confirm(`Delete ${s.nombre}?`)) return;
   const {error}=await sb.from('suplidores').delete().eq('id',id);
   if(error) return toast('Error: '+error.message);
-  if(s.fotos?.length) await sb.storage.from('suplidores').remove(s.fotos);
-  cerrar(); await cargar(); toast('Borrado');
+  if(s.fotos?.length) await sb.storage.from(BUCKET).remove(s.fotos);
+  cerrar(); await cargar(); toast('Deleted');
 }
 
-/* Empleados */
+/* Employees */
 function vEmpleados(){
-  return `<div class="h"><h2>${S.empleados.filter(e=>e.activo).length} activos</h2><button class="btn sm" onclick="formEmpleado()">+ Empleado</button></div>
+  return `<div class="h"><h2>${S.empleados.filter(e=>e.activo).length} active</h2><button class="btn sm" onclick="formEmpleado()">+ Employee</button></div>
   ${S.empleados.map(e=>`<div class="card item" onclick="formEmpleado('${e.id}')">
-    <div><div class="t">${esc(e.nombre)} ${e.activo?'':'<span class="tag x">Inactivo</span>'}</div>
+    <div><div class="t">${esc(e.nombre)} ${e.activo?'':'<span class="tag p">Inactive</span>'}</div>
       <div class="s">${esc(e.puesto||'')}</div>
-      ${pendAdel(e.id)?`<div class="s neg">Adelantos pendientes: ${fmt(pendAdel(e.id))}</div>`:''}</div>
-    <div class="amt">${fmt(e.sueldo)}<div class="s">${esc(e.tipo_sueldo)}</div></div>
-  </div>`).join('') || '<div class="empty">Aún no hay empleados.</div>'}`;
+      ${pendAdel(e.id)?`<div class="s neg">Pending advances: ${fmt(pendAdel(e.id))}</div>`:''}</div>
+    <div class="amt">${fmt(e.sueldo)}<div class="s">${PAY_LBL[e.tipo_sueldo]||e.tipo_sueldo}</div></div>
+  </div>`).join('') || '<div class="empty">No employees yet.</div>'}`;
 }
 function formEmpleado(id){
   const e=S.empleados.find(x=>x.id===id)||{tipo_sueldo:'diario',activo:true,fotos:[]};
   const ads=S.adelantos.filter(a=>a.empleado_id===id).sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
   S.fotosTmp=[...(e.fotos||[])]; S.fotosDir='empleados/';
-  abrir(`<h2>${id?'Editar':'Nuevo'} empleado</h2>
-  <label>Nombre</label><input id="e_nom" value="${esc(e.nombre)}">
-  <div class="row"><div><label>Cédula</label><input id="e_ced" inputmode="numeric" value="${esc(e.cedula)}"></div><div><label>Teléfono</label><input id="e_tel" type="tel" value="${esc(e.telefono)}"></div></div>
-  <label>Puesto</label><input id="e_pue" value="${esc(e.puesto)}">
-  <div class="row"><div><label>Tipo de sueldo</label><select id="e_tipo">${['diario','semanal','quincenal'].map(t=>`<option ${e.tipo_sueldo===t?'selected':''}>${t}</option>`).join('')}</select></div>
-    <div><label>Sueldo (RD$)</label><input id="e_sue" type="number" inputmode="decimal" step="0.01" value="${e.sueldo??''}"></div></div>
-  <label class="chk"><input type="checkbox" id="e_act" ${e.activo?'checked':''}> Activo</label>
+  abrir(`<h2>${id?'Edit':'New'} employee</h2>
+  <label>Name</label><input id="e_nom" value="${esc(e.nombre)}">
+  <div class="row"><div><label>ID / Passport</label><input id="e_ced" value="${esc(e.cedula)}"></div><div><label>Phone</label><input id="e_tel" type="tel" value="${esc(e.telefono)}"></div></div>
+  <label>Position</label><input id="e_pue" value="${esc(e.puesto)}">
+  <div class="row"><div><label>Pay type</label><select id="e_tipo">${Object.entries(PAY_LBL).map(([k,l])=>`<option value="${k}" ${e.tipo_sueldo===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div><label>Salary (RD$)</label><input id="e_sue" type="number" inputmode="decimal" step="0.01" value="${e.sueldo??''}"></div></div>
+  <label class="chk"><input type="checkbox" id="e_act" ${e.activo?'checked':''}> Active</label>
   ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrar('empleados','${id}')">Borrar</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="guardarEmpleado('${id||''}')">Guardar</button>
+    ${id?`<button class="btn bad" onclick="borrar('empleados','${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardarEmpleado('${id||''}')">Save</button>
   </div>
-  ${id?`<div class="card" style="margin-top:16px"><div class="h"><h2>Adelantos</h2></div>
-    <div class="row"><div><label>Monto</label><input id="a_mon" type="number" inputmode="decimal" step="0.01"></div><div><label>Nota</label><input id="a_not"></div>
-    <button class="btn sm" onclick="guardarAdelanto('${id}')">Agregar</button></div>
-    ${ads.map(a=>`<div class="asis"><div class="nm">${fecha(a.fecha)} ${esc(a.nota||'')}</div><b>${fmtN(a.monto)}</b> ${a.descontado?'<span class="tag g">Descontado</span>':'<span class="tag p">Pendiente</span>'}</div>`).join('')}
+  ${id?`<div class="card" style="margin-top:16px"><div class="h"><h2>Advances</h2></div>
+    <div class="row"><div><label>Amount</label><input id="a_mon" type="number" inputmode="decimal" step="0.01"></div><div><label>Note</label><input id="a_not"></div>
+    <button class="btn sm" onclick="guardarAdelanto('${id}')">Add</button></div>
+    ${ads.map(a=>`<div class="asis"><div class="nm">${fecha(a.fecha)} ${esc(a.nota||'')}</div><b>${fmt(a.monto)}</b> ${a.descontado?'<span class="tag">Deducted</span>':'<span class="tag d">Pending</span>'}</div>`).join('')}
   </div>`:''}`);
   pintarFotos();
 }
 async function guardarEmpleado(id){
-  const d={nombre:$('#e_nom').value.trim(),cedula:$('#e_ced').value.trim(),telefono:$('#e_tel').value.trim(),puesto:$('#e_pue').value.trim(),
+  const d={nombre:$('#e_nom').value.trim(),cedula:alnum($('#e_ced').value),telefono:$('#e_tel').value.trim(),puesto:$('#e_pue').value.trim(),
     tipo_sueldo:$('#e_tipo').value,sueldo:num('#e_sue'),activo:$('#e_act').checked,fotos:S.fotosTmp};
-  if(!d.nombre) return toast('Pon el nombre del empleado');
+  if(!d.nombre) return toast('Enter the employee name');
   await limpiarFotos(S.empleados.find(x=>x.id===id)?.fotos, d.fotos);
   await guardar('empleados',id,d);
 }
 async function guardarAdelanto(eid){
-  const monto=num('#a_mon'); if(!monto) return toast('Pon el monto');
+  const monto=num('#a_mon'); if(!monto) return toast('Enter the amount');
   const {error}=await sb.from('adelantos').insert({empleado_id:eid,monto,nota:$('#a_not').value.trim(),fecha:hoy()});
   if(error) return toast('Error: '+error.message);
-  await cargar(); formEmpleado(eid); toast('Adelanto registrado');
+  await cargar(); formEmpleado(eid); toast('Advance recorded');
 }
 
-/* Obras */
+/* Projects */
 const gastoObra = id => sum(S.gastos.filter(x=>x.obra_id===id),x=>x.monto_total);
 function vObras(){
-  return `<div class="h"><h2>${S.obras.filter(o=>o.estado==='activa').length} activas</h2><button class="btn sm" onclick="formObra()">+ Obra</button></div>
+  return `<div class="h"><h2>${S.obras.filter(o=>o.estado==='activa').length} active</h2><button class="btn sm" onclick="formObra()">+ Project</button></div>
   ${S.obras.map(o=>`<div class="card">
     <div class="item" onclick="formObra('${o.id}')"><div><div class="t">${esc(o.nombre)}</div>
       <div class="s">${esc(o.cliente||'')}${o.cliente&&o.direccion?' · ':''}${esc(o.direccion||'')}</div>
-      <div class="s"><span class="tag ${o.estado==='activa'?'g':'x'}">${esc(o.estado)}</span></div></div>
-      <div class="amt">${fmt(gastoObra(o.id))}<div class="s">en gastos</div></div></div>
-    <div class="row" style="margin-top:8px"><button class="btn sm sec" onclick="verGastos({obra:'${o.id}'})">Ver gastos</button><button class="btn sm sec" onclick="S.fn='${o.id}';ir('notas')">Notas</button></div>
-  </div>`).join('') || '<div class="empty">Crea tu primera obra con el botón de arriba.</div>'}`;
+      <div class="s"><span class="tag ${o.estado==='activa'?'d':'p'}">${STATUS_LBL[o.estado]||o.estado}</span></div></div>
+      <div class="amt">${fmt(gastoObra(o.id))}<div class="s">in expenses</div></div></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm sec" onclick="verGastos({obra:'${o.id}'})">Expenses</button><button class="btn sm sec" onclick="S.fn='${o.id}';ir('notas')">Notes</button></div>
+  </div>`).join('') || '<div class="empty">Create your first project with the button above.</div>'}`;
 }
 function formObra(id){
   const o=S.obras.find(x=>x.id===id)||{estado:'activa'};
-  abrir(`<h2>${id?'Editar':'Nueva'} obra</h2>
-  <label>Nombre</label><input id="o_nom" value="${esc(o.nombre)}">
-  <label>Cliente</label><input id="o_cli" value="${esc(o.cliente)}">
-  <label>Dirección</label><input id="o_dir" value="${esc(o.direccion)}">
-  <label>Estado</label><select id="o_est">${['activa','pausada','terminada'].map(t=>`<option ${o.estado===t?'selected':''}>${t}</option>`).join('')}</select>
+  abrir(`<h2>${id?'Edit':'New'} project</h2>
+  <label>Name</label><input id="o_nom" value="${esc(o.nombre)}">
+  <label>Client</label><input id="o_cli" value="${esc(o.cliente)}">
+  <label>Address</label><input id="o_dir" value="${esc(o.direccion)}">
+  <label>Status</label><select id="o_est">${Object.entries(STATUS_LBL).map(([k,l])=>`<option value="${k}" ${o.estado===k?'selected':''}>${l}</option>`).join('')}</select>
   <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrar('obras','${id}')">Borrar</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="if(!$('#o_nom').value.trim())return toast('Pon el nombre');guardar('obras','${id||''}',{nombre:$('#o_nom').value.trim(),cliente:$('#o_cli').value.trim(),direccion:$('#o_dir').value.trim(),estado:$('#o_est').value})">Guardar</button>
+    ${id?`<button class="btn bad" onclick="borrar('obras','${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="if(!$('#o_nom').value.trim())return toast('Enter the name');guardar('obras','${id||''}',{nombre:$('#o_nom').value.trim(),cliente:$('#o_cli').value.trim(),direccion:$('#o_dir').value.trim(),estado:$('#o_est').value})">Save</button>
   </div>`);
 }
 
-/* Partidas */
+/* Categories */
 function vPartidas(){
   return `<div class="card"><div class="row">
-    <input id="p_nueva" placeholder="Nueva partida" onkeydown="if(event.key==='Enter')agregarPartida()">
-    <button class="btn sm" onclick="agregarPartida()">Agregar</button></div></div>
+    <input id="p_nueva" placeholder="New category" onkeydown="if(event.key==='Enter')agregarPartida()">
+    <button class="btn sm" onclick="agregarPartida()">Add</button></div></div>
   ${S.partidas.map(p=>`<div class="card item">
-    <div onclick="renombrarPartida('${p.id}')" style="flex:1"><div class="t">${esc(p.nombre)}</div><div class="s">${S.gastos.filter(g=>g.partida===p.nombre).length} gastos · toca para renombrar</div></div>
-    <button class="btn sm bad" onclick="borrarPartida('${p.id}')">Borrar</button></div>`).join('')
-  || `<div class="empty">No hay partidas todavía.<br><br><button class="btn sec" onclick="partidasSugeridas()">Agregar una lista inicial</button></div>`}`;
+    <div onclick="renombrarPartida('${p.id}')" style="flex:1"><div class="t">${esc(p.nombre)}</div><div class="s">${S.gastos.filter(g=>g.partida===p.nombre).length} expenses · tap to rename</div></div>
+    <button class="btn sm bad" onclick="borrarPartida('${p.id}')">Delete</button></div>`).join('')
+  || `<div class="empty">No categories yet.<br><br><button class="btn sec" onclick="partidasSugeridas()">Add a starter list</button></div>`}`;
 }
 async function agregarPartida(){
   const nombre=$('#p_nueva').value.trim(); if(!nombre) return;
   const {error}=await sb.from('partidas').insert({nombre});
-  if(error) return toast(error.code==='23505'?'Esa partida ya existe':'Error: '+error.message);
-  await cargar(); toast('Partida agregada');
+  if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
+  await cargar(); toast('Category added');
 }
 async function renombrarPartida(id){
   const p=S.partidas.find(x=>x.id===id);
-  const nuevo=(prompt('Nuevo nombre de la partida:',p.nombre)||'').trim();
+  const nuevo=(prompt('New category name:',p.nombre)||'').trim();
   if(!nuevo||nuevo===p.nombre) return;
   const {error}=await sb.from('partidas').update({nombre:nuevo}).eq('id',id);
-  if(error) return toast(error.code==='23505'?'Esa partida ya existe':'Error: '+error.message);
+  if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
   await sb.from('gastos').update({partida:nuevo}).eq('partida',p.nombre);
-  await cargar(); toast('Partida renombrada');
+  await cargar(); toast('Category renamed');
 }
 async function borrarPartida(id){
   const p=S.partidas.find(x=>x.id===id);
-  if(!confirm(`¿Borrar la partida "${p.nombre}"? Los gastos que ya la tienen no se cambian.`)) return;
+  if(!confirm(`Delete the category "${p.nombre}"? Expenses that already use it are not changed.`)) return;
   const {error}=await sb.from('partidas').delete().eq('id',id);
   if(error) return toast('Error: '+error.message);
-  await cargar(); toast('Partida borrada');
+  await cargar(); toast('Category deleted');
 }
 async function partidasSugeridas(){
-  const {error}=await sb.from('partidas').insert(PARTIDAS_SUGERIDAS.map(nombre=>({nombre})));
+  const {error}=await sb.from('partidas').insert(CATEGORIES_START.map(nombre=>({nombre})));
   if(error) return toast('Error: '+error.message);
-  await cargar(); toast('Partidas agregadas');
+  await cargar(); toast('Categories added');
 }
 
-/* ---------- Exportar ---------- */
+/* ---------- Export ---------- */
 const enRango = (f,d1,d2) => !!f && (!d1||f>=d1) && (!d2||f<=d2);
-function dsGastos(gs){
+const slug = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30) || 'expense';
+function nombresFotos(gs){
+  const map={};
+  gs.forEach(g=>{ (g.fotos||[]).forEach((p,i)=>{ (map[g.id]=map[g.id]||[]).push(`${g.fecha}_${slug(g.suplidor||g.descripcion)}_${String(g.id).slice(0,4)}${g.fotos.length>1?'_'+(i+1):''}.jpg`); }); });
+  return map;
+}
+function dsGastos(gs, fotosMap){
   gs=gs.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  return {t:'Gastos', h:['Fecha','Tipo','Obra','Descripción','Suplidor','RNC / Cédula','NCF','Partida','Neto','ITBIS','Propina','Bruto','Método de pago'],
-    rows:gs.map(g=>[fecha(g.fecha),g.tipo==='obra'?'Obra':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.propina),r2(g.monto_total),g.metodo_pago||'']),
-    num:[8,9,10,11], sum:[8,9,10,11], pdf:[0,4,2,3,7,6,8,9,10,11]};
+  const h=['Date','Type','Project','Description','Supplier','RNC / ID','NCF','Category','Net','ITBIS','Tip','Gross','Payment method'];
+  if(fotosMap) h.push('Invoice photos');
+  return {t:'Expenses', h,
+    rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Project':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
+      if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
+    num:[8,9,10,11], sum:[8,9,10,11], pdf:[0,4,2,3,7,6,8,9,10,11], gastos:gs};
 }
 function dsResumen(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
   const rows=S.obras.map(o=>[o.nombre,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]).filter(r=>r[1]);
-  const sinObra=sum(gs.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total); if(sinObra) rows.push(['Obra sin asignar',r2(sinObra)]);
+  const sinObra=sum(gs.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total); if(sinObra) rows.push(['No project assigned',r2(sinObra)]);
   rows.push(['Personal',r2(sum(gs.filter(g=>g.tipo==='personal'),g=>g.monto_total))]);
-  rows.push(['Nómina',r2(sum(S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)),p=>p.neto))]);
-  return {t:'Balance', h:['Concepto','Monto'], rows, num:[1], sum:[1]};
+  rows.push(['Payroll',r2(sum(S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)),p=>p.neto))]);
+  return {t:'Balance', h:['Item','Amount'], rows, num:[1], sum:[1]};
 }
 function dsNomina(d1,d2){
   const ps=S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)).sort((a,b)=>String(a.fecha_pago).localeCompare(String(b.fecha_pago)));
-  return {t:'Nómina', h:['Fecha de pago','Empleado','Desde','Hasta','Días','Antes de adelantos','Adelantos','Pagado'],
+  return {t:'Payroll', h:['Payment date','Employee','From','To','Days','Before advances','Advances','Paid'],
     rows:ps.map(p=>[fecha(p.fecha_pago),nomEmp(p.empleado_id),fecha(p.desde),fecha(p.hasta),Number(p.dias_trabajados)||0,r2(p.bruto),r2(p.descuentos),r2(p.neto)]),
     num:[5,6,7], sum:[5,6,7]};
 }
@@ -755,48 +812,49 @@ function dsAsistencia(d1,d2){
   const emps=S.empleados.filter(e=>as.some(a=>a.empleado_id===e.id));
   const cnt=(rs,k)=>rs.filter(a=>estadoDe(a)===k).length;
   return [
-    {t:'Asistencia (resumen)', h:['Empleado','Presente','Tardanza','Parcial','Excusa pagada','Excusa no pagada','Faltó','Días a pagar'],
+    {t:'Attendance summary', h:['Employee','Present','Late','Partial','Excused (paid)','Excused (unpaid)','Absent','Days to pay'],
       rows:emps.map(e=>{const rs=as.filter(a=>a.empleado_id===e.id);
         return [e.nombre,cnt(rs,'presente'),cnt(rs,'tardanza'),cnt(rs,'parcial'),rs.filter(a=>estadoDe(a)==='excusa'&&a.excusa_pagada).length,rs.filter(a=>estadoDe(a)==='excusa'&&!a.excusa_pagada).length,cnt(rs,'ausente'),sum(rs,factorDia)];})},
-    {t:'Asistencia (detalle)', h:['Fecha','Empleado','Estado','Horas extra','Excusa pagada','Motivo'],
-      rows:as.map(a=>{const e=estadoDe(a);return [fecha(a.fecha),nomEmp(a.empleado_id),LBL_ESTADO[e]||e,Number(a.horas_extra)||0,e==='excusa'?(a.excusa_pagada?'Sí':'No'):'',a.motivo||''];})}
+    {t:'Attendance detail', h:['Date','Employee','Status','Overtime hours','Excuse paid','Reason'],
+      rows:as.map(a=>{const e=estadoDe(a);return [fecha(a.fecha),nomEmp(a.empleado_id),LBL_ESTADO[e]||e,Number(a.horas_extra)||0,e==='excusa'?(a.excusa_pagada?'Yes':'No'):'',a.motivo||''];})}
   ];
 }
 function dsEmpleados(){
-  return {t:'Empleados', h:['Nombre','Cédula','Teléfono','Puesto','Tipo de sueldo','Sueldo','Activo','Adelantos pendientes'],
-    rows:S.empleados.map(e=>[e.nombre,e.cedula||'',e.telefono||'',e.puesto||'',e.tipo_sueldo,r2(e.sueldo),e.activo?'Sí':'No',r2(pendAdel(e.id))]), num:[5,7]};
+  return {t:'Employees', h:['Name','ID / Passport','Phone','Position','Pay type','Salary','Active','Pending advances'],
+    rows:S.empleados.map(e=>[e.nombre,e.cedula||'',e.telefono||'',e.puesto||'',PAY_LBL[e.tipo_sueldo]||e.tipo_sueldo,r2(e.sueldo),e.activo?'Yes':'No',r2(pendAdel(e.id))]), num:[5,7]};
 }
 function dsSuplidores(){
-  return {t:'Suplidores', h:['Nombre','Tipo','Profesión','RNC / Cédula','Teléfono','Correo','Dirección','Banco','Cuenta','Notas'],
-    rows:S.suplidores.map(s=>[s.nombre,s.tipo==='empresa'?'Empresa':'Particular',s.tipo==='particular'?(s.profesion||''):'',s.documento||'',s.telefono||'',s.correo||'',s.direccion||'',s.banco||'',s.cuenta_banco||'',s.notas||'']),
+  return {t:'Suppliers', h:['Name','Type','Profession','RNC / ID','Phone','Email','Address','Bank','Account','Notes'],
+    rows:S.suplidores.map(s=>[s.nombre,s.tipo==='empresa'?'Company':'Individual',s.tipo==='particular'?(s.profesion||''):'',s.documento||'',s.telefono||'',s.correo||'',s.direccion||'',s.banco||'',s.cuenta_banco||'',s.notas||'']),
     pdf:[0,1,2,3,4,5,7,8]};
 }
 function dsObras(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
-  return {t:'Obras', h:['Obra','Cliente','Dirección','Estado','Gastos en el período'],
-    rows:S.obras.map(o=>[o.nombre,o.cliente||'',o.direccion||'',o.estado,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]), num:[4], sum:[4]};
+  return {t:'Projects', h:['Project','Client','Address','Status','Expenses in period'],
+    rows:S.obras.map(o=>[o.nombre,o.cliente||'',o.direccion||'',STATUS_LBL[o.estado]||o.estado,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]), num:[4], sum:[4]};
 }
 function dsNotas(d1,d2){
   const ns=S.notas.filter(n=>enRango(String(n.creado).slice(0,10),d1,d2)).sort((a,b)=>String(a.creado).localeCompare(String(b.creado)));
-  return {t:'Notas', h:['Fecha','Obra','Título','Contenido'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||''])};
+  return {t:'Notes', h:['Date','Project','Title','Content'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||''])};
 }
-const EXPORTABLES=[['resumen','Balance'],['gastos','Gastos'],['nomina','Nómina (pagos)'],['asistencia','Asistencia'],['obras','Obras'],['empleados','Empleados'],['suplidores','Suplidores'],['notas','Notas']];
-function menu(){
+const EXPORTABLES=[['resumen','Balance'],['gastos','Expenses'],['nomina','Payroll payments'],['asistencia','Attendance'],['obras','Projects'],['empleados','Employees'],['suplidores','Suppliers'],['notas','Notes']];
+function pantallaExport(){
   const m=hoy().slice(0,7);
-  abrir(`<h2>Exportar</h2>
+  abrir(`<h2>Export</h2>
   <div class="row">
-    <div><label>Desde</label><input type="date" id="x_d1" value="${m}-01"></div>
-    <div><label>Hasta</label><input type="date" id="x_d2" value="${hoy()}"></div>
+    <div><label>From</label><input type="date" id="x_d1" value="${m}-01"></div>
+    <div><label>To</label><input type="date" id="x_d2" value="${hoy()}"></div>
   </div>
-  <div class="chips"><button onclick="rango('mes')">Este mes</button><button onclick="rango('pasado')">Mes pasado</button><button onclick="rango('anio')">Este año</button><button onclick="rango('todo')">Todo</button></div>
-  <label style="margin-top:14px">¿Qué quieres exportar?</label>
+  <div class="chips"><button onclick="rango('mes')">This month</button><button onclick="rango('pasado')">Last month</button><button onclick="rango('anio')">This year</button><button onclick="rango('todo')">All</button></div>
+  <label style="margin-top:14px">What do you want to export?</label>
   ${EXPORTABLES.map(([k,l])=>`<label class="chk"><input type="checkbox" id="x_${k}" ${['resumen','gastos'].includes(k)?'checked':''}> ${l}</label>`).join('')}
-  <div class="s" style="margin-top:10px">Empleados y suplidores salen completos; lo demás, según las fechas.</div>
+  <label class="chk" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bd)"><input type="checkbox" id="x_fotos"> Include invoice photos</label>
+  <div class="s" style="margin-top:10px">Employees and suppliers are exported in full; everything else follows the dates. With photos, the PDF adds one page per invoice and Excel comes in a ZIP with the photos.</div>
   <div class="row" style="margin-top:16px">
-    <button class="btn sec" onclick="cerrar()">Cancelar</button>
-    <button class="btn" onclick="exportarMenu('xlsx')">Excel</button>
     <button class="btn" onclick="exportarMenu('pdf')">PDF</button>
-  </div>`);
+    <button class="btn" onclick="exportarMenu('xlsx')">Excel</button>
+  </div>
+  <button class="btn sec full lg" style="margin-top:10px" onclick="cerrar()">Cancel</button>`);
 }
 function rango(k){
   const d=new Date(); let a='', b='';
@@ -805,78 +863,123 @@ function rango(k){
   if(k==='anio'){ a=d.getFullYear()+'-01-01'; b=hoy(); }
   $('#x_d1').value=a; $('#x_d2').value=b;
 }
-function textoPeriodo(d1,d2){ return (d1||d2) ? `Período: ${d1?fecha(d1):'inicio'} - ${d2?fecha(d2):'hoy'}` : 'Todo el historial'; }
+function textoPeriodo(d1,d2){ return (d1||d2) ? `Period: ${d1?fecha(d1):'start'} - ${d2?fecha(d2):'today'}` : 'All history'; }
 async function exportarMenu(formato){
-  const d1=$('#x_d1').value, d2=$('#x_d2').value;
+  const d1=$('#x_d1').value, d2=$('#x_d2').value, conFotos=$('#x_fotos').checked;
   const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,$('#x_'+k).checked]));
+  const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
+  const fotosMap=(conFotos&&sel.gastos&&formato==='xlsx')?nombresFotos(gs):null;
   const dss=[];
   if(sel.resumen) dss.push(dsResumen(d1,d2));
-  if(sel.gastos) dss.push(dsGastos(S.gastos.filter(g=>enRango(g.fecha,d1,d2))));
+  if(sel.gastos) dss.push(dsGastos(gs,fotosMap));
   if(sel.nomina) dss.push(dsNomina(d1,d2));
   if(sel.asistencia) dss.push(...dsAsistencia(d1,d2));
   if(sel.obras) dss.push(dsObras(d1,d2));
   if(sel.empleados) dss.push(dsEmpleados());
   if(sel.suplidores) dss.push(dsSuplidores());
   if(sel.notas) dss.push(dsNotas(d1,d2));
-  if(!dss.length) return toast('Marca al menos una cosa para exportar');
-  const nombre=`Obras_${d1||'inicio'}_a_${d2||hoy()}`;
-  if(formato==='pdf') await crearPDF(dss,'Reporte',textoPeriodo(d1,d2),nombre+'.pdf');
-  else await crearExcel(dss,nombre+'.xlsx');
+  if(!dss.length) return toast('Select at least one item to export');
+  if(conFotos && !sel.gastos) toast('Photos are included only with Expenses');
+  const nombre=`CM_${d1||'start'}_to_${d2||hoy()}`;
+  const fotosDe = (conFotos&&sel.gastos) ? gs : [];
+  if(formato==='pdf') await crearPDF(dss,'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
+  else await crearExcel(dss,nombre,fotosDe,fotosMap);
   cerrar();
 }
 async function exportarFiltrado(formato){
-  const gs=gastosFiltrados();
-  if(!gs.length) return toast('No hay gastos para exportar');
+  const gs=gastosFiltrados(), conFotos=$('#gx_fotos')?.checked;
+  if(!gs.length) return toast('No expenses to export');
   const f=S.f, partes=[];
-  if(f.tipo) partes.push(f.tipo==='obra'?'Gastos de obras':'Gastos personales');
-  if(f.obra) partes.push('Obra: '+nomObra(f.obra));
+  if(f.tipo) partes.push(f.tipo==='obra'?'Project expenses':'Personal expenses');
+  if(f.obra) partes.push('Project: '+nomObra(f.obra));
   if(f.desde||f.hasta) partes.push(textoPeriodo(f.desde,f.hasta));
-  if(f.q) partes.push('Búsqueda: '+f.q);
-  const nombre=`Gastos_${hoy()}`;
-  if(formato==='pdf') await crearPDF([dsGastos(gs)],'Reporte de gastos',partes.join('   |   ')||'Todos los gastos',nombre+'.pdf');
-  else await crearExcel([dsGastos(gs)],nombre+'.xlsx');
+  if(f.q) partes.push('Search: '+f.q);
+  const nombre=`Expenses_${hoy()}`;
+  const fotosMap=(conFotos&&formato==='xlsx')?nombresFotos(gs):null;
+  if(formato==='pdf') await crearPDF([dsGastos(gs)],'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
+  else await crearExcel([dsGastos(gs,fotosMap)],nombre,conFotos?gs:[],fotosMap);
 }
-const filaTotal = ds => ds.h.map((_,i)=> i===0 ? 'Total' : (ds.sum||[]).includes(i) ? r2(sum(ds.rows,r=>r[i])) : '');
-async function crearExcel(dss,nombre){
+const MONEY_FMT='"RD$" #,##0.00';
+async function crearExcel(dss,nombre,gastosFotos,fotosMap){
   const wb=XLSX.utils.book_new();
   for(const ds of dss){
-    const aoa=[ds.h,...ds.rows]; if(ds.sum&&ds.rows.length) aoa.push(filaTotal(ds));
+    const aoa=[ds.h,...ds.rows];
+    if(ds.sum&&ds.rows.length) aoa.push(ds.h.map((_,i)=> i===0 ? 'Total' : ds.sum.includes(i) ? r2(sum(ds.rows,r=>r[i])) : ''));
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols']=ds.h.map((k,i)=>({wch:Math.min(45,Math.max(...aoa.map(r=>String(r[i]??'').length))+2)}));
+    (ds.num||[]).forEach(c=>{ for(let r=1;r<aoa.length;r++){ const cell=ws[XLSX.utils.encode_cell({r,c})]; if(cell&&typeof cell.v==='number') cell.z=MONEY_FMT; } });
+    ws['!cols']=ds.h.map((k,i)=>({wch:Math.min(45,Math.max(...aoa.map(r=>String(r[i]??'').length))+ ((ds.num||[]).includes(i)?6:2))}));
     XLSX.utils.book_append_sheet(wb,ws,ds.t.slice(0,31));
   }
   const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-  await descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),nombre);
+  const conFotos=(gastosFotos||[]).filter(g=>g.fotos?.length);
+  if(!conFotos.length){
+    if(gastosFotos?.length) toast('No invoice photos in these expenses');
+    return descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),nombre+'.xlsx');
+  }
+  if(!window.JSZip) return toast('Could not load the ZIP tool. Check your connection.');
+  const aviso=toast('Preparing photos…',60000);
+  const zip=new JSZip();
+  zip.file(nombre+'.xlsx',buf);
+  const carpeta=zip.folder('Invoices');
+  for(const g of conFotos){
+    for(let i=0;i<g.fotos.length;i++){
+      const {data,error}=await sb.storage.from(BUCKET).download(g.fotos[i]);
+      if(!error&&data) carpeta.file(fotosMap[g.id][i],data);
+    }
+  }
+  const blob=await zip.generateAsync({type:'blob'});
+  aviso.remove();
+  await descargar(new Blob([blob],{type:'application/zip'}),nombre+'.zip');
 }
-async function crearPDF(dss,titulo,sub,nombre){
-  if(!window.jspdf) return toast('No se pudo cargar el generador de PDF. Revisa la conexión.');
+const blobADataURL = b => new Promise(ok=>{ const r=new FileReader(); r.onload=()=>ok(r.result); r.readAsDataURL(b); });
+const medidas = src => new Promise(ok=>{ const i=new Image(); i.onload=()=>ok({w:i.width,h:i.height}); i.onerror=()=>ok(null); i.src=src; });
+async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
+  if(!window.jspdf) return toast('Could not load the PDF tool. Check your connection.');
   const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
   const alto=doc.internal.pageSize.getHeight(), ancho=doc.internal.pageSize.getWidth();
-  doc.setFontSize(14); doc.text(titulo,14,14);
-  doc.setFontSize(9); doc.text(sub+'   |   Generado el '+fecha(hoy()),14,20);
+  doc.setFontSize(14); doc.text('Construction Management - '+titulo,14,14);
+  doc.setFontSize(9); doc.text(sub+'   |   Generated on '+fecha(hoy()),14,20);
   let y=28;
   for(const ds of dss){
     const cols=ds.pdf||ds.h.map((_,i)=>i), nums=ds.num||[];
     if(y>alto-40){ doc.addPage(); y=16; }
     doc.setFontSize(11); doc.text(`${ds.t} (${ds.rows.length})`,14,y);
-    const cel=(v,i)=>nums.includes(i)?fmtN(v):String(v??'');
+    const cel=(v,i)=>nums.includes(i)?fmt(v):String(v??'');
     const colStyles={}; cols.forEach((i,j)=>{ if(nums.includes(i)) colStyles[j]={halign:'right'}; });
     doc.autoTable({
       startY:y+2,
       head:[cols.map(i=>ds.h[i])],
-      body:ds.rows.length ? ds.rows.map(r=>cols.map(i=>cel(r[i],i))) : [[{content:'Sin datos en este período',colSpan:cols.length}]],
-      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?fmtN(sum(ds.rows,r=>r[i])):'')] : [],
+      body:ds.rows.length ? ds.rows.map(r=>cols.map(i=>cel(r[i],i))) : [[{content:'No data in this period',colSpan:cols.length}]],
+      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?fmt(sum(ds.rows,r=>r[i])):'')] : [],
       showFoot:'lastPage',
       styles:{fontSize:8,cellPadding:1.5},
-      headStyles:{fillColor:[31,58,95]},
-      footStyles:{fillColor:[232,238,246],textColor:20,fontStyle:'bold'},
+      headStyles:{fillColor:[51,56,61]},
+      footStyles:{fillColor:[231,233,235],textColor:20,fontStyle:'bold'},
       columnStyles:colStyles,
       margin:{left:14,right:14}
     });
     y=doc.lastAutoTable.finalY+12;
   }
+  const conFotos=(gastosFotos||[]).slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).filter(g=>g.fotos?.length);
+  if(gastosFotos?.length && !conFotos.length) toast('No invoice photos in these expenses');
+  if(conFotos.length){
+    const aviso=toast('Preparing photos…',60000);
+    for(const g of conFotos){
+      for(let i=0;i<g.fotos.length;i++){
+        const {data,error}=await sb.storage.from(BUCKET).download(g.fotos[i]);
+        if(error||!data) continue;
+        const url=await blobADataURL(data), m=await medidas(url); if(!m) continue;
+        doc.addPage(); doc.setFontSize(11);
+        doc.text(`${fecha(g.fecha)}  |  ${g.suplidor||g.descripcion||''}  |  ${fmt(g.monto_total)}${g.ncf?'  |  NCF '+g.ncf:''}${g.fotos.length>1?`  (${i+1}/${g.fotos.length})`:''}`,14,14);
+        const maxW=ancho-28, maxH=alto-34, k=Math.min(maxW/m.w,maxH/m.h);
+        const w=m.w*k, h=m.h*k;
+        doc.addImage(url,'JPEG',(ancho-w)/2,22,w,h);
+      }
+    }
+    aviso.remove();
+  }
   const n=doc.internal.getNumberOfPages();
-  for(let p=1;p<=n;p++){ doc.setPage(p); doc.setFontSize(8); doc.text(`Página ${p} de ${n}`,ancho-34,alto-8); }
+  for(let p=1;p<=n;p++){ doc.setPage(p); doc.setFontSize(8); doc.text(`Page ${p} of ${n}`,ancho-30,alto-8); }
   await descargar(doc.output('blob'),nombre);
 }
 async function descargar(blob,nombre){
