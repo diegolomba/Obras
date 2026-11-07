@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Construction">
+<meta name="apple-mobile-web-app-title" content="CMS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2e3236">
-<title>Construction Management</title>
+<title>CMS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -21,13 +21,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,
 [hidden]{display:none!important}
 svg.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
 header{position:sticky;top:0;background:var(--hdr);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;justify-content:space-between;align-items:center;z-index:5}
-header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:2px}
 header button{background:none;color:#fff;border:0;padding:6px;display:flex;align-items:center}
 header .izq{display:flex;align-items:center;gap:8px}
 header svg.ic{width:26px;height:26px}
 main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:11px;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:10px;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav button.on{color:var(--tx);font-weight:600}
 .card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1 1 130px}
@@ -82,13 +82,33 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 .chips button.on{color:#fff;background:var(--pri);border-color:var(--pri)}
 .dia{padding:10px 0;border-bottom:1px solid var(--bd)}
 #login{max-width:380px;margin:12vh auto;padding:20px}
+.drop{position:fixed;inset:0;z-index:25;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .18s}
+.drop.on{opacity:1;pointer-events:auto}
+.drop .panel{position:absolute;left:10px;top:calc(env(safe-area-inset-top) + 56px);width:240px;background:rgba(255,255,255,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.25);overflow:hidden;transform:translateY(-14px) scale(.97);transform-origin:top left;transition:transform .2s ease}
+.drop.on .panel{transform:none}
+.drop .panel button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--bd);background:none;padding:14px 16px;font-size:16px;color:var(--tx);text-align:left}
+.drop .panel button:last-child{border-bottom:0}
+.dlg{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:24px}
+.dlg .box{background:#fff;border-radius:14px;padding:20px 18px 16px;width:100%;max-width:320px;text-align:center}
+.dlg .box p{margin:0 0 16px;font-size:16px;font-weight:600}
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.gal img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#dde0e3;border-radius:4px;cursor:pointer}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:40;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.lb img{max-width:100%;max-height:100%;object-fit:contain}
+.task{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--bd)}
+.task>input[type=checkbox]{width:22px;height:22px;margin-top:1px;flex:0 0 auto;accent-color:var(--pri)}
+.task .tx{flex:1;cursor:pointer;min-width:0}
+.task.done .tt{text-decoration:line-through;color:var(--mut)}
+.meta{font-size:12px;color:var(--mut);margin-top:3px;display:flex;flex-wrap:wrap;gap:3px 10px;align-items:center}
+.vencida{color:var(--bad)}
+.x{border:0;background:none;color:var(--mut);font-size:16px;padding:2px 6px}
 </style>
 </head>
 <body>
 
 <div id="login" hidden>
   <form class="card" onsubmit="event.preventDefault();entrar()">
-    <h2 style="margin-top:0">Construction Management</h2>
+    <h2 style="margin-top:0">CMS</h2>
     <label>Email</label><input id="l_email" type="email" autocomplete="username" autocapitalize="off">
     <label>Password</label><input id="l_pass" type="password" autocomplete="current-password">
     <button class="btn full" style="margin-top:14px">Sign in</button>
@@ -98,13 +118,16 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 
 <div id="app" hidden>
   <header>
-    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>Construction Management</h1></div>
+    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>CMS</h1></div>
     <button onclick="recargar()" aria-label="Refresh" id="b_ref"></button>
   </header>
   <main id="view"><div class="empty">Loading…</div></main>
   <nav id="nav"></nav>
 </div>
 
+<div id="drop" class="drop" onclick="if(event.target===this)cerrarMenu()"><div class="panel" id="dropPanel"></div></div>
+<div id="dlg" class="dlg" hidden></div>
+<div id="lb" class="lb" hidden onclick="this.hidden=true"><img id="lbImg" alt=""></div>
 <div id="sheet" class="sheet" hidden onclick="if(event.target===this)cerrar()"><div class="sheet-body" id="sheetBody"></div></div>
 
 <script>
@@ -126,6 +149,8 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 14v6h14v-6"/>',
   logout:'<path d="M9 4H5v16h4"/><path d="M16 8l4 4-4 4M20 12H10"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  check:'<path d="M5 12l4 4 10-10"/>',
   phone:'<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
 };
 const ic = (n,size) => `<svg class="ic" viewBox="0 0 24 24" ${size?`style="width:${size}px;height:${size}px"`:''}>${ICONS[n]}</svg>`;
@@ -136,8 +161,9 @@ const CATEGORIES_START = ['Materials','Labor','Subcontracts','Equipment rental',
 const METHODS = ['Cash','Transfer','Card','Check','Credit'];
 const BANKS = ['Banreservas','Banco Popular','BHD','Scotiabank','Banco Santa Cruz','Promerica','Banesco','Banco Caribe','BDI','Banco Vimenca','Banco López de Haro','Banco Lafise','Asociación Popular (APAP)','Asociación Cibao','Asociación La Nacional'];
 // Daily rate per DR labor code (44 h week = 5.5 days; biweekly = 23.83/2 days)
-const DIAS_PERIODO = {diario:1, semanal:5.5, quincenal:11.915};
-const PAY_LBL = {diario:'Daily', semanal:'Weekly', quincenal:'Biweekly'};
+const DIAS_PERIODO = {diario:1, semanal:5.5, quincenal:11.915, mensual:23.83};
+const PAY_LBL = {diario:'Daily', semanal:'Weekly', quincenal:'Biweekly', mensual:'Monthly'};
+const SAL_HINT = {diario:'Amount per day.', semanal:'Amount per week.', quincenal:'Amount per biweekly period.', mensual:'Full monthly salary. Each payment is half the month.'};
 const STATUS_LBL = {activa:'Active', pausada:'Paused', terminada:'Finished'};
 const ESTADOS = [['presente','Present'],['tardanza','Late'],['parcial','Partial'],['excusa','Excused'],['ausente','Absent']];
 const LBL_ESTADO = Object.fromEntries(ESTADOS);
@@ -159,7 +185,7 @@ const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
 const obraOpts = (sel, blank='— No project —') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
 const S = {
-  obras:[], gastos:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[],
+  obras:[], gastos:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[],
   tab:'inicio', sub:'asistencia', db:'suplidores', listo:false,
   f:{tipo:'',obra:'',desde:'',hasta:'',q:''},
   fn:'todas', qs:'', calMes:hoy().slice(0,7), nd:sumaDias(hoy(),-6), nh:hoy(),
@@ -187,7 +213,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 
 /* ---------- Data ---------- */
 async function cargar(){
-  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas'};
+  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas'};
   const keys = Object.keys(tablas);
   const res = await Promise.all(keys.map(k => sb.from(tablas[k]).select('*').range(0,9999)));
   for(let i=0;i<keys.length;i++){
@@ -216,21 +242,30 @@ async function borrar(t,id){
 }
 
 /* ---------- Navigation ---------- */
-const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['nomina','users','Payroll'],['notas','note','Notes'],['database','db','Database']];
+const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['notas','note','TTD'],['galeria','image','Gallery'],['nomina','users','Payroll'],['database','db','Database']];
 function ir(t){ S.tab=t; render(); window.scrollTo(0,0); }
 function render(){
   $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')">${ic(i)}${l}</button>`).join('');
-  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,database:vDatabase})[S.tab]();
+  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,galeria:vGaleria,database:vDatabase})[S.tab]();
+  if(S.tab==='galeria') cargarGaleria();
 }
 function seg(opciones, actual, accion){
   return `<div class="seg">${opciones.map(([k,l])=>`<button class="${actual===k?'on':''}" onclick="${accion}('${k}')">${l}</button>`).join('')}</div>`;
 }
 function menu(){
-  abrir(`<div class="menu">
-    <button onclick="pantallaExport()">${ic('export')} Export</button>
-    <button onclick="salir()">${ic('logout')} Log out</button>
-  </div>
-  <button class="btn sec full lg" style="margin-top:12px" onclick="cerrar()">Close</button>`);
+  $('#dropPanel').innerHTML=`<button onclick="cerrarMenu();pantallaExport()">${ic('export')} Export</button><button onclick="cerrarMenu();salir()">${ic('logout')} Log out</button>`;
+  $('#drop').classList.add('on');
+}
+function cerrarMenu(){ $('#drop').classList.remove('on'); }
+function preguntar(msg, si='Yes', no='No'){
+  return new Promise(ok=>{
+    const d=$('#dlg');
+    d.innerHTML=`<div class="box"><p>${esc(msg)}</p><div class="row"><button class="btn sec" id="dlg_no">${no}</button><button class="btn" id="dlg_si">${si}</button></div></div>`;
+    d.hidden=false;
+    const fin=v=>{ d.hidden=true; ok(v); };
+    $('#dlg_si').onclick=()=>fin(true); $('#dlg_no').onclick=()=>fin(false);
+    d.onclick=e=>{ if(e.target===d) fin(null); };
+  });
 }
 
 /* ---------- Home ---------- */
@@ -286,8 +321,7 @@ function vGastos(){
     <label>Search</label><input type="search" placeholder="Supplier, NCF, description…" value="${esc(f.q)}" oninput="setF('q',this.value)">
   </div>
   <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button></div>
-  <div class="row" style="margin-bottom:4px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel</button></div>
-  <label class="chk" style="margin:6px 0 12px"><input type="checkbox" id="gx_fotos"> Include invoice photos</label>
+  <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel</button></div>
   <div id="glist">${listaGastos()}</div>`;
 }
 function listaGastos(){
@@ -473,12 +507,18 @@ async function guardarDia(){
 function calcNomina(){
   return S.empleados.map(e=>{
     const as=S.asistencia.filter(a=>a.empleado_id===e.id&&a.fecha>=S.nd&&a.fecha<=S.nh);
-    const dias=sum(as,factorDia), he=sum(as.filter(a=>['presente','tardanza'].includes(estadoDe(a))),a=>a.horas_extra), td=tarifaDiaria(e);
-    const bruto=r2(dias*td + he*(td/8)*1.35);
+    const he=sum(as.filter(a=>['presente','tardanza'].includes(estadoDe(a))),a=>a.horas_extra), td=tarifaDiaria(e);
     const ad=pendAdel(e.id);
     const ya=S.pagos.find(p=>p.empleado_id===e.id&&p.desde===S.nd&&p.hasta===S.nh);
+    if(e.tipo_sueldo==='mensual'){
+      const faltas=sum(as,a=>1-factorDia(a));
+      const bruto=r2(Math.max(0,(Number(e.sueldo)||0)/2 - faltas*td) + he*(td/8)*1.35);
+      return {e,mensual:true,faltas,dias:null,he,td,bruto,ad,neto:r2(bruto-ad),ya};
+    }
+    const dias=sum(as,factorDia);
+    const bruto=r2(dias*td + he*(td/8)*1.35);
     return {e,dias,he,td,bruto,ad,neto:r2(bruto-ad),ya};
-  }).filter(x=>x.dias>0||x.ya);
+  }).filter(x=>x.dias>0||x.ya||(x.mensual&&x.e.activo));
 }
 function vPagos(){
   const filas=calcNomina(), pend=filas.filter(f=>!f.ya);
@@ -486,10 +526,10 @@ function vPagos(){
   return `<div class="card"><div class="row">
     <div><label>From</label><input type="date" value="${S.nd}" onchange="S.nd=this.value;render()"></div>
     <div><label>To</label><input type="date" value="${S.nh}" onchange="S.nh=this.value;render()"></div></div>
-    <div class="s" style="margin-top:6px">Based on attendance: partial = half day, excused depends on whether it is paid. Overtime at +35%.</div></div>
+    <div class="s" style="margin-top:6px">Based on attendance: partial = half day, excused depends on whether it is paid. Overtime at +35%. Monthly employees get half their salary per payment, minus absences (salary ÷ 23.83 per day).</div></div>
   <div class="stats"><div class="stat"><span>To pay</span><b>${fmt(sum(pend,f=>f.neto))}</b></div><div class="stat"><span>Employees</span><b>${pend.length}</b></div></div>
   ${filas.map(f=>`<div class="card">
-    <div class="item"><div><div class="t">${esc(f.e.nombre)}</div><div class="s">${f.dias} days × ${fmt(f.td)}${f.he?` + ${f.he} h overtime`:''}</div>
+    <div class="item"><div><div class="t">${esc(f.e.nombre)}</div><div class="s">${f.mensual?`Half month ${fmt((Number(f.e.sueldo)||0)/2)}${f.faltas?` − ${f.faltas} absence days × ${fmt(f.td)}`:''}`:`${f.dias} days × ${fmt(f.td)}`}${f.he?` + ${f.he} h overtime`:''}</div>
       ${!f.ya&&f.ad?`<div class="s neg">Advances to deduct: ${fmt(f.ad)}</div>`:''}</div>
       <div class="amt">${fmt(f.ya?f.ya.neto:f.neto)}${(f.ya?f.ya.descuentos:f.ad)?`<div class="s">before advances ${fmt(f.ya?f.ya.bruto:f.bruto)}</div>`:''}</div></div>
     <div style="margin-top:8px;text-align:right">${f.ya?'<span class="tag d">Paid</span>':`<button class="btn sm" onclick="pagar('${f.e.id}')">Record payment</button>`}</div>
@@ -516,29 +556,190 @@ async function pagarTodos(){
   await cargar(); toast('Payments recorded');
 }
 
-/* ---------- Notes ---------- */
+/* ---------- TTD (Things To Do) ---------- */
+const ordenT = (a,b) => (a.orden-b.orden) || String(a.creado).localeCompare(String(b.creado));
+const tareasDe = nid => S.tareas.filter(t=>t.nota_id===nid&&!t.parent_id).sort(ordenT);
+const subsDe = tid => S.tareas.filter(t=>t.parent_id===tid).sort(ordenT);
 function vNotas(){
   const f=S.fn;
   const ns=S.notas.filter(n=>f==='todas'||(f==='gen'?!n.obra_id:n.obra_id===f)).sort((a,b)=>String(b.creado).localeCompare(String(a.creado)));
   return `<div class="row" style="margin-bottom:10px">
-    <select onchange="S.fn=this.value;render()"><option value="todas">All notes</option><option value="gen" ${f==='gen'?'selected':''}>General</option>${S.obras.map(o=>`<option value="${o.id}" ${f===o.id?'selected':''}>${esc(o.nombre)}</option>`).join('')}</select>
-    <button class="btn" style="flex:0 0 auto" onclick="formNota()">+ Note</button></div>
-  ${ns.map(n=>`<div class="card" onclick="formNota('${n.id}')">
-    <div class="t">${esc(n.titulo||'(untitled)')}</div>
-    <div class="s">${n.obra_id?`<span class="tag">${esc(nomObra(n.obra_id))}</span>`:'<span class="tag p">General</span>'} ${fecha(n.creado)}</div>
-    <div class="prev">${esc((n.contenido||'').slice(0,220))}${(n.contenido||'').length>220?'…':''}</div></div>`).join('') || '<div class="empty">No notes yet.</div>'}`;
+    <select onchange="S.fn=this.value;render()"><option value="todas">All lists</option><option value="gen" ${f==='gen'?'selected':''}>General</option>${S.obras.map(o=>`<option value="${o.id}" ${f===o.id?'selected':''}>${esc(o.nombre)}</option>`).join('')}</select>
+    <button class="btn" style="flex:0 0 auto" onclick="nuevaNota()">+ New</button></div>
+  ${ns.map(n=>{ const ts=tareasDe(n.id), hechas=ts.filter(t=>t.hecho).length;
+    const prox=ts.filter(t=>!t.hecho&&t.fecha_limite).map(t=>t.fecha_limite).sort()[0];
+    return `<div class="card" onclick="abrirNota('${n.id}')">
+      <div class="t">${esc(n.titulo||'(untitled)')}</div>
+      <div class="s">${n.obra_id?`<span class="tag">${esc(nomObra(n.obra_id))}</span>`:'<span class="tag p">General</span>'}${ts.length?` ${hechas}/${ts.length} done`:''}${prox?` · <span class="${prox<hoy()?'vencida':''}">Due ${fecha(prox)}</span>`:''}</div>
+      ${n.contenido?`<div class="prev">${esc(n.contenido.slice(0,140))}${n.contenido.length>140?'…':''}</div>`:''}</div>`; }).join('') || '<div class="empty">No lists yet.</div>'}`;
 }
-function formNota(id){
-  const n=S.notas.find(x=>x.id===id)||{obra_id:(S.fn!=='todas'&&S.fn!=='gen')?S.fn:''};
-  abrir(`<h2>${id?'Edit':'New'} note</h2>
+function nuevaNota(){
+  const ob=(S.fn!=='todas'&&S.fn!=='gen')?S.fn:'';
+  abrir(`<h2>New list</h2>
+  <label>Title</label><input id="n_tit">
+  <label>Project</label><select id="n_obra">${obraOpts(ob,'— General —')}</select>
+  <label>Notes</label><textarea id="n_txt" style="min-height:100px"></textarea>
+  <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancel</button><button class="btn" onclick="crearNota()">Create</button></div>`);
+}
+async function crearNota(){
+  const d={titulo:$('#n_tit').value.trim()||'Untitled', obra_id:$('#n_obra').value||null, contenido:$('#n_txt').value};
+  const {data,error}=await sb.from('notas').insert(d).select().single();
+  if(error) return toast('Error: '+error.message);
+  S.notas.push(data); render(); abrirNota(data.id);
+}
+function abrirNota(id){
+  const n=S.notas.find(x=>x.id===id); if(!n) return;
+  S.notaId=id;
+  abrir(`<div class="h"><h2>List</h2><button class="btn sm" onclick="cerrarNota()">Save</button></div>
   <label>Title</label><input id="n_tit" value="${esc(n.titulo)}">
-  <label>Project</label><select id="n_obra">${obraOpts(n.obra_id,'— General note —')}</select>
-  <label>Content</label><textarea id="n_txt">${esc(n.contenido)}</textarea>
-  <div class="row" style="margin-top:16px">
-    ${id?`<button class="btn bad" onclick="borrar('notas','${id}')">Delete</button>`:''}
-    <button class="btn sec" onclick="cerrar()">Cancel</button>
-    <button class="btn" onclick="guardar('notas','${id||''}',{titulo:$('#n_tit').value.trim(),obra_id:$('#n_obra').value||null,contenido:$('#n_txt').value})">Save</button>
-  </div>`);
+  <label>Project</label><select id="n_obra">${obraOpts(n.obra_id,'— General —')}</select>
+  <label>Notes</label><textarea id="n_txt" style="min-height:100px">${esc(n.contenido)}</textarea>
+  <div class="h" style="margin-top:16px"><h2>Tasks</h2></div>
+  <div id="tlist">${listaTareas(id)}</div>
+  <div class="row" style="margin-top:8px"><input id="t_nueva" placeholder="New task" onkeydown="if(event.key==='Enter')agregarTarea()"><button class="btn sm" onclick="agregarTarea()">Add</button></div>
+  <div class="row" style="margin-top:20px"><button class="btn bad" onclick="borrarNota('${id}')">Delete list</button><button class="btn" onclick="cerrarNota()">Save</button></div>`);
+}
+function metaTarea(t){
+  const subs=subsDe(t.id), parts=[];
+  if(t.encargado) parts.push(`${ic('users',13)} ${esc(t.encargado)}`);
+  if(t.fecha_limite) parts.push(`<span class="${!t.hecho&&t.fecha_limite<hoy()?'vencida':''}">Due ${fecha(t.fecha_limite)}</span>`);
+  if(t.obra_id) parts.push(esc(nomObra(t.obra_id)));
+  if(subs.length) parts.push(`${ic('check',13)} ${subs.filter(s=>s.hecho).length}/${subs.length}`);
+  if(t.fotos?.length) parts.push(`${ic('camera',13)} ${t.fotos.length}`);
+  return parts.length ? `<div class="meta">${parts.map(p=>`<span>${p}</span>`).join('')}</div>` : '';
+}
+function listaTareas(nid){
+  return tareasDe(nid).map(t=>`<div class="task ${t.hecho?'done':''}">
+    <input type="checkbox" ${t.hecho?'checked':''} onchange="marcarTarea('${t.id}',this.checked)">
+    <div class="tx" onclick="abrirTarea('${t.id}')"><div class="tt">${esc(t.texto)}</div>${metaTarea(t)}</div></div>`).join('') || '<div class="s">No tasks yet.</div>';
+}
+async function guardarCabecera(){
+  const id=S.notaId, n=S.notas.find(x=>x.id===id); if(!n||!$('#n_tit')) return;
+  const d={titulo:$('#n_tit').value.trim()||'Untitled', obra_id:$('#n_obra').value||null, contenido:$('#n_txt').value};
+  if(d.titulo===n.titulo && d.obra_id===(n.obra_id||null) && d.contenido===(n.contenido||'')) return;
+  Object.assign(n,d);
+  const {error}=await sb.from('notas').update(d).eq('id',id);
+  if(error) toast('Error: '+error.message);
+}
+async function cerrarNota(){ await guardarCabecera(); cerrar(); render(); }
+async function agregarTarea(){
+  const texto=$('#t_nueva').value.trim(); if(!texto) return;
+  const n=S.notas.find(x=>x.id===S.notaId);
+  const {data,error}=await sb.from('tareas').insert({nota_id:S.notaId, texto, orden:tareasDe(S.notaId).length, obra_id:n?.obra_id||null}).select().single();
+  if(error) return toast('Error: '+error.message);
+  S.tareas.push(data); $('#t_nueva').value=''; $('#tlist').innerHTML=listaTareas(S.notaId); $('#t_nueva').focus();
+}
+async function marcarTarea(id,val){
+  const t=S.tareas.find(x=>x.id===id); if(!t) return;
+  const cambios=[{id,hecho:val}];
+  if(!t.parent_id){ subsDe(id).forEach(s=>{ if(s.hecho!==val) cambios.push({id:s.id,hecho:val}); }); }
+  else { const p=S.tareas.find(x=>x.id===t.parent_id);
+    if(p){ const todas=subsDe(p.id).every(s=>s.id===id?val:s.hecho); if(p.hecho!==todas) cambios.push({id:p.id,hecho:todas}); } }
+  for(const c of cambios){
+    const {error}=await sb.from('tareas').update({hecho:c.hecho}).eq('id',c.id);
+    if(error) return toast('Error: '+error.message);
+    S.tareas.find(x=>x.id===c.id).hecho=c.hecho;
+  }
+  if($('#tlist')) $('#tlist').innerHTML=listaTareas(S.notaId);
+  if($('#sublist')){ $('#sublist').innerHTML=listaSubs(S.tareaId); if($('#t_hecho')) $('#t_hecho').checked=!!S.tareas.find(x=>x.id===S.tareaId)?.hecho; }
+}
+function abrirTarea(id){
+  guardarCabecera();
+  const t=S.tareas.find(x=>x.id===id); if(!t) return;
+  S.tareaId=id; S.fotosTmp=[...(t.fotos||[])]; S.fotosDir='tareas/';
+  const emps=S.empleados.filter(e=>e.activo);
+  const nombres=[...emps.map(e=>e.nombre), ...S.suplidores.map(s=>s.nombre)];
+  const otro=!!t.encargado && !nombres.includes(t.encargado);
+  abrir(`<div class="h"><button class="btn sm sec" onclick="volverNota()">‹ Back</button><h2>Task</h2><span style="width:60px"></span></div>
+  <label class="chk"><input type="checkbox" id="t_hecho" ${t.hecho?'checked':''}> Done</label>
+  <label>Task</label><input id="t_txt" value="${esc(t.texto)}">
+  <label>Assigned to</label><select id="t_enc" onchange="$('#t_enc2').hidden=this.value!=='__otro'">
+    <option value="">— None —</option>
+    ${emps.length?`<optgroup label="Employees">${emps.map(e=>`<option ${e.nombre===t.encargado?'selected':''}>${esc(e.nombre)}</option>`).join('')}</optgroup>`:''}
+    ${S.suplidores.length?`<optgroup label="Suppliers">${S.suplidores.map(s=>`<option ${s.nombre===t.encargado?'selected':''}>${esc(s.nombre)}</option>`).join('')}</optgroup>`:''}
+    <option value="__otro" ${otro?'selected':''}>Other</option></select>
+  <input id="t_enc2" style="margin-top:6px" placeholder="Name" value="${otro?esc(t.encargado):''}" ${otro?'':'hidden'}>
+  <div class="row"><div><label>Due date</label><input type="date" id="t_fecha" value="${t.fecha_limite||''}"></div><div><label>Project</label><select id="t_obra">${obraOpts(t.obra_id)}</select></div></div>
+  ${bloqueFotos()}
+  <div class="h" style="margin-top:16px"><h2>Subtasks</h2></div>
+  <div id="sublist">${listaSubs(id)}</div>
+  <div class="row" style="margin-top:8px"><input id="st_nueva" placeholder="New subtask" onkeydown="if(event.key==='Enter')agregarSub()"><button class="btn sm" onclick="agregarSub()">Add</button></div>
+  <div class="row" style="margin-top:20px"><button class="btn bad" onclick="borrarTarea('${id}')">Delete</button><button class="btn sec" onclick="volverNota()">Cancel</button><button class="btn" onclick="guardarTarea()">Save</button></div>`);
+  pintarFotos();
+}
+function listaSubs(tid){
+  return subsDe(tid).map(s=>`<div class="task ${s.hecho?'done':''}">
+    <input type="checkbox" ${s.hecho?'checked':''} onchange="marcarTarea('${s.id}',this.checked)">
+    <div class="tx"><div class="tt">${esc(s.texto)}</div></div>
+    <button class="x" onclick="borrarSub('${s.id}')" aria-label="Delete">✕</button></div>`).join('') || '<div class="s">No subtasks.</div>';
+}
+async function agregarSub(){
+  const texto=$('#st_nueva').value.trim(); if(!texto) return;
+  const t=S.tareas.find(x=>x.id===S.tareaId);
+  const {data,error}=await sb.from('tareas').insert({nota_id:t.nota_id, parent_id:t.id, texto, orden:subsDe(t.id).length}).select().single();
+  if(error) return toast('Error: '+error.message);
+  S.tareas.push(data);
+  if(t.hecho){ await sb.from('tareas').update({hecho:false}).eq('id',t.id); t.hecho=false; $('#t_hecho').checked=false; }
+  $('#st_nueva').value=''; $('#sublist').innerHTML=listaSubs(t.id); $('#st_nueva').focus();
+}
+async function borrarSub(id){
+  const {error}=await sb.from('tareas').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  S.tareas=S.tareas.filter(x=>x.id!==id); $('#sublist').innerHTML=listaSubs(S.tareaId);
+}
+async function guardarTarea(){
+  const t=S.tareas.find(x=>x.id===S.tareaId); if(!t) return;
+  const enc=$('#t_enc').value==='__otro' ? $('#t_enc2').value.trim() : $('#t_enc').value;
+  const d={texto:$('#t_txt').value.trim()||t.texto, encargado:enc||null, fecha_limite:$('#t_fecha').value||null, obra_id:$('#t_obra').value||null, fotos:S.fotosTmp};
+  const hecho=$('#t_hecho').checked;
+  await limpiarFotos(t.fotos, d.fotos);
+  const {error}=await sb.from('tareas').update(d).eq('id',t.id);
+  if(error) return toast('Error: '+error.message);
+  Object.assign(t,d);
+  if(hecho!==!!t.hecho) await marcarTarea(t.id,hecho);
+  volverNota(); toast('Saved');
+}
+function volverNota(){ S.tareaId=null; abrirNota(S.notaId); }
+async function borrarTarea(id){
+  if(!confirm('Delete this task and its subtasks?')) return;
+  const fotos=S.tareas.filter(t=>t.id===id||t.parent_id===id).flatMap(t=>t.fotos||[]);
+  const {error}=await sb.from('tareas').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  if(fotos.length) await sb.storage.from(BUCKET).remove(fotos);
+  S.tareas=S.tareas.filter(t=>t.id!==id&&t.parent_id!==id); volverNota();
+}
+async function borrarNota(id){
+  if(!confirm('Delete this list and all its tasks?')) return;
+  const fotos=S.tareas.filter(t=>t.nota_id===id).flatMap(t=>t.fotos||[]);
+  const {error}=await sb.from('notas').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  if(fotos.length) await sb.storage.from(BUCKET).remove(fotos);
+  cerrar(); await cargar(); toast('Deleted');
+}
+
+/* ---------- Gallery ---------- */
+function fotosTodas(){
+  const L=[], dia=v=>String(v||'').slice(0,10);
+  S.gastos.forEach(g=>(g.fotos||[]).forEach(p=>L.push({p,f:dia(g.fecha)})));
+  S.tareas.forEach(t=>(t.fotos||[]).forEach(p=>L.push({p,f:dia(t.creado)})));
+  S.suplidores.forEach(s=>(s.fotos||[]).forEach(p=>L.push({p,f:dia(s.creado)})));
+  S.empleados.forEach(e=>(e.fotos||[]).forEach(p=>L.push({p,f:dia(e.creado)})));
+  return L.sort((a,b)=>b.f.localeCompare(a.f));
+}
+function vGaleria(){
+  const n=fotosTodas().length;
+  return n ? `<div class="s" style="margin:0 0 8px">${n} photo${n===1?'':'s'}</div><div class="gal" id="gal"></div>` : '<div class="empty">No photos yet.</div>';
+}
+async function cargarGaleria(){
+  const L=fotosTodas(), box=$('#gal'); if(!L.length||!box) return;
+  box.innerHTML=L.map(()=>'<img alt="" loading="lazy">').join('');
+  const urls=[];
+  for(let i=0;i<L.length;i+=100){
+    const {data}=await sb.storage.from(BUCKET).createSignedUrls(L.slice(i,i+100).map(x=>x.p),3600);
+    L.slice(i,i+100).forEach((_,j)=>urls.push(data?.[j]?.signedUrl||''));
+  }
+  if(S.tab!=='galeria') return;
+  box.querySelectorAll('img').forEach((im,i)=>{ if(!urls[i]) return; im.src=urls[i]; im.onclick=()=>{ $('#lbImg').src=urls[i]; $('#lb').hidden=false; }; });
 }
 
 /* ---------- Database ---------- */
@@ -682,8 +883,9 @@ function formEmpleado(id){
   <label>Name</label><input id="e_nom" value="${esc(e.nombre)}">
   <div class="row"><div><label>ID / Passport</label><input id="e_ced" value="${esc(e.cedula)}"></div><div><label>Phone</label><input id="e_tel" type="tel" value="${esc(e.telefono)}"></div></div>
   <label>Position</label><input id="e_pue" value="${esc(e.puesto)}">
-  <div class="row"><div><label>Pay type</label><select id="e_tipo">${Object.entries(PAY_LBL).map(([k,l])=>`<option value="${k}" ${e.tipo_sueldo===k?'selected':''}>${l}</option>`).join('')}</select></div>
+  <div class="row"><div><label>Pay type</label><select id="e_tipo" onchange="$('#e_hint').textContent=SAL_HINT[this.value]||''">${Object.entries(PAY_LBL).map(([k,l])=>`<option value="${k}" ${e.tipo_sueldo===k?'selected':''}>${l}</option>`).join('')}</select></div>
     <div><label>Salary (RD$)</label><input id="e_sue" type="number" inputmode="decimal" step="0.01" value="${e.sueldo??''}"></div></div>
+  <div class="s" id="e_hint">${SAL_HINT[e.tipo_sueldo]||''}</div>
   <label class="chk"><input type="checkbox" id="e_act" ${e.activo?'checked':''}> Active</label>
   ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
@@ -694,7 +896,7 @@ function formEmpleado(id){
   ${id?`<div class="card" style="margin-top:16px"><div class="h"><h2>Advances</h2></div>
     <div class="row"><div><label>Amount</label><input id="a_mon" type="number" inputmode="decimal" step="0.01"></div><div><label>Note</label><input id="a_not"></div>
     <button class="btn sm" onclick="guardarAdelanto('${id}')">Add</button></div>
-    ${ads.map(a=>`<div class="asis"><div class="nm">${fecha(a.fecha)} ${esc(a.nota||'')}</div><b>${fmt(a.monto)}</b> ${a.descontado?'<span class="tag">Deducted</span>':'<span class="tag d">Pending</span>'}</div>`).join('')}
+    ${ads.map(a=>`<div class="asis" style="cursor:pointer" onclick="formAdelanto('${a.id}')"><div class="nm">${fecha(a.fecha)} ${esc(a.nota||'')}</div><b>${fmt(a.monto)}</b> ${a.descontado?'<span class="tag">Deducted</span>':'<span class="tag d">Pending</span>'}</div>`).join('')}
   </div>`:''}`);
   pintarFotos();
 }
@@ -704,6 +906,28 @@ async function guardarEmpleado(id){
   if(!d.nombre) return toast('Enter the employee name');
   await limpiarFotos(S.empleados.find(x=>x.id===id)?.fotos, d.fotos);
   await guardar('empleados',id,d);
+}
+function formAdelanto(id){
+  const a=S.adelantos.find(x=>x.id===id); if(!a) return;
+  abrir(`<div class="h"><button class="btn sm sec" onclick="formEmpleado('${a.empleado_id}')">‹ Back</button><h2>Advance</h2><span style="width:60px"></span></div>
+  <div class="s">${esc(nomEmp(a.empleado_id))}</div>
+  <div class="row"><div><label>Date</label><input type="date" id="ad_f" value="${a.fecha||hoy()}"></div><div><label>Amount</label><input type="number" inputmode="decimal" step="0.01" id="ad_m" value="${a.monto}"></div></div>
+  <label>Note</label><input id="ad_n" value="${esc(a.nota)}">
+  <label class="chk"><input type="checkbox" id="ad_d" ${a.descontado?'checked':''}> Already deducted</label>
+  <div class="row" style="margin-top:16px"><button class="btn bad" onclick="borrarAdelanto('${id}')">Delete</button><button class="btn" onclick="guardarAdelantoEd('${id}')">Save</button></div>`);
+}
+async function guardarAdelantoEd(id){
+  const a=S.adelantos.find(x=>x.id===id), monto=num('#ad_m'); if(!monto) return toast('Enter the amount');
+  const {error}=await sb.from('adelantos').update({fecha:$('#ad_f').value||hoy(),monto,nota:$('#ad_n').value.trim(),descontado:$('#ad_d').checked}).eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  await cargar(); formEmpleado(a.empleado_id); toast('Saved');
+}
+async function borrarAdelanto(id){
+  const a=S.adelantos.find(x=>x.id===id);
+  if(!confirm('Delete this advance?')) return;
+  const {error}=await sb.from('adelantos').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  await cargar(); formEmpleado(a.empleado_id); toast('Deleted');
 }
 async function guardarAdelanto(eid){
   const monto=num('#a_mon'); if(!monto) return toast('Enter the amount');
@@ -835,9 +1059,10 @@ function dsObras(d1,d2){
 }
 function dsNotas(d1,d2){
   const ns=S.notas.filter(n=>enRango(String(n.creado).slice(0,10),d1,d2)).sort((a,b)=>String(a.creado).localeCompare(String(b.creado)));
-  return {t:'Notes', h:['Date','Project','Title','Content'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||''])};
+  return {t:'TTD', h:['Date','Project','Title','Notes','Tasks'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||'',
+    tareasDe(n.id).map(t=>`[${t.hecho?'x':' '}] ${t.texto}${t.encargado?' ('+t.encargado+')':''}${t.fecha_limite?' due '+fecha(t.fecha_limite):''}`).join('; ')])};
 }
-const EXPORTABLES=[['resumen','Balance'],['gastos','Expenses'],['nomina','Payroll payments'],['asistencia','Attendance'],['obras','Projects'],['empleados','Employees'],['suplidores','Suppliers'],['notas','Notes']];
+const EXPORTABLES=[['resumen','Balance'],['gastos','Expenses'],['nomina','Payroll payments'],['asistencia','Attendance'],['obras','Projects'],['empleados','Employees'],['suplidores','Suppliers'],['notas','TTD']];
 function pantallaExport(){
   const m=hoy().slice(0,7);
   abrir(`<h2>Export</h2>
@@ -848,8 +1073,7 @@ function pantallaExport(){
   <div class="chips"><button onclick="rango('mes')">This month</button><button onclick="rango('pasado')">Last month</button><button onclick="rango('anio')">This year</button><button onclick="rango('todo')">All</button></div>
   <label style="margin-top:14px">What do you want to export?</label>
   ${EXPORTABLES.map(([k,l])=>`<label class="chk"><input type="checkbox" id="x_${k}" ${['resumen','gastos'].includes(k)?'checked':''}> ${l}</label>`).join('')}
-  <label class="chk" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bd)"><input type="checkbox" id="x_fotos"> Include invoice photos</label>
-  <div class="s" style="margin-top:10px">Employees and suppliers are exported in full; everything else follows the dates. With photos, the PDF adds one page per invoice and Excel comes in a ZIP with the photos.</div>
+  <div class="s" style="margin-top:10px">Employees and suppliers are exported in full; everything else follows the dates. If you include invoice photos, the PDF adds one page per invoice and Excel comes in a ZIP with the photos.</div>
   <div class="row" style="margin-top:16px">
     <button class="btn" onclick="exportarMenu('pdf')">PDF</button>
     <button class="btn" onclick="exportarMenu('xlsx')">Excel</button>
@@ -865,8 +1089,10 @@ function rango(k){
 }
 function textoPeriodo(d1,d2){ return (d1||d2) ? `Period: ${d1?fecha(d1):'start'} - ${d2?fecha(d2):'today'}` : 'All history'; }
 async function exportarMenu(formato){
-  const d1=$('#x_d1').value, d2=$('#x_d2').value, conFotos=$('#x_fotos').checked;
+  const d1=$('#x_d1').value, d2=$('#x_d2').value;
   const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,$('#x_'+k).checked]));
+  let conFotos=false;
+  if(sel.gastos && S.gastos.some(g=>enRango(g.fecha,d1,d2)&&g.fotos?.length)){ const r=await preguntar('Include invoice photos?'); if(r===null) return; conFotos=r; }
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
   const fotosMap=(conFotos&&sel.gastos&&formato==='xlsx')?nombresFotos(gs):null;
   const dss=[];
@@ -879,7 +1105,6 @@ async function exportarMenu(formato){
   if(sel.suplidores) dss.push(dsSuplidores());
   if(sel.notas) dss.push(dsNotas(d1,d2));
   if(!dss.length) return toast('Select at least one item to export');
-  if(conFotos && !sel.gastos) toast('Photos are included only with Expenses');
   const nombre=`CM_${d1||'start'}_to_${d2||hoy()}`;
   const fotosDe = (conFotos&&sel.gastos) ? gs : [];
   if(formato==='pdf') await crearPDF(dss,'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
@@ -887,8 +1112,10 @@ async function exportarMenu(formato){
   cerrar();
 }
 async function exportarFiltrado(formato){
-  const gs=gastosFiltrados(), conFotos=$('#gx_fotos')?.checked;
+  const gs=gastosFiltrados();
   if(!gs.length) return toast('No expenses to export');
+  let conFotos=false;
+  if(gs.some(g=>g.fotos?.length)){ const r=await preguntar('Include invoice photos?'); if(r===null) return; conFotos=r; }
   const f=S.f, partes=[];
   if(f.tipo) partes.push(f.tipo==='obra'?'Project expenses':'Personal expenses');
   if(f.obra) partes.push('Project: '+nomObra(f.obra));
@@ -937,7 +1164,7 @@ async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
   if(!window.jspdf) return toast('Could not load the PDF tool. Check your connection.');
   const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
   const alto=doc.internal.pageSize.getHeight(), ancho=doc.internal.pageSize.getWidth();
-  doc.setFontSize(14); doc.text('Construction Management - '+titulo,14,14);
+  doc.setFontSize(14); doc.text('CMS - '+titulo,14,14);
   doc.setFontSize(9); doc.text(sub+'   |   Generated on '+fecha(hoy()),14,20);
   let y=28;
   for(const ds of dss){
