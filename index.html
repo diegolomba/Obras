@@ -181,6 +181,8 @@ const sum = (a,f) => a.reduce((s,x)=>s+(Number(f(x))||0),0);
 const num = sel => r2(parseFloat($(sel).value)||0);
 const alnum = v => String(v||'').replace(/[^0-9A-Za-z]/g,'').toUpperCase();
 const nomObra = id => S.obras.find(o=>o.id===id)?.nombre || '';
+function ncfModo(){ $('#g_ncf').setAttribute('inputmode',$('#g_ncfp').value==='OTRO'?'text':'numeric'); $('#g_ncf').blur(); }
+const conApodo = x => (x.nombre||'') + (x.apodo?` “${x.apodo}”`:'');
 const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
 const obraOpts = (sel, blank='— No project —') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
@@ -350,13 +352,13 @@ function formGasto(id){
   <div class="row">
     <div><label>Supplier</label><select id="g_supid" onchange="elegirSup()">
       <option value="">${S.suplidores.length?'— Select —':'— Add suppliers in Database —'}</option>
-      ${S.suplidores.map(s=>`<option value="${s.id}" ${s.id===g.suplidor_id?'selected':''}>${esc(s.nombre)}</option>`).join('')}
+      ${S.suplidores.map(s=>`<option value="${s.id}" ${s.id===g.suplidor_id?'selected':''}>${esc(conApodo(s))}</option>`).join('')}
       <option value="otro" ${otro?'selected':''}>Other</option></select>
       <input id="g_sup" style="margin-top:6px" placeholder="Supplier name" value="${esc(g.suplidor)}" ${otro?'':'hidden'}></div>
     <div><label>RNC / ID</label><input id="g_rnc" value="${esc(g.rnc)}"></div>
   </div>
   <div class="row">
-    <div><label>NCF</label><input id="g_ncf" autocapitalize="characters" placeholder="B0100000001" value="${esc(g.ncf)}"></div>
+    <div><label>NCF</label><div style="display:flex;gap:6px"><select id="g_ncfp" style="width:84px;flex:none" onchange="ncfModo()">${(()=>{const m=String(g.ncf||'').toUpperCase().match(/^([A-Z]\d{2})(\d*)$/);g._p=m?m[1]:(g.ncf?'OTRO':'B01');g._n=m?m[2]:String(g.ncf||'');return ['B01','B02','E31','E32','B03','B04','B11','B12','B13','B14','B15','B16','B17','E33','E34','E41','E43','E44','E45','E46','E47','OTRO'].map(x=>`<option value="${x}" ${x===g._p?'selected':''}>${x==='OTRO'?'Other':x}</option>`).join('')})()}</select><input id="g_ncf" inputmode="${g._p==='OTRO'?'text':'numeric'}" autocapitalize="characters" placeholder="00000001" value="${esc(g._n)}"></div></div>
     <div><label>Category</label><select id="g_part"><option value="">${S.partidas.length?'— Select —':'— Add categories in Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
   </div>
   <div class="row">
@@ -407,7 +409,7 @@ async function guardarGasto(id){
   const d={fecha:$('#g_fecha').value||hoy(), tipo, obra_id:tipo==='obra'?($('#g_obra').value||null):null,
     descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(),
     suplidor_id:(supid&&supid!=='otro')?supid:null, rnc:alnum($('#g_rnc').value),
-    ncf:$('#g_ncf').value.trim().toUpperCase(), partida:$('#g_part').value,
+    ncf:(()=>{if($('#g_ncfp').value==='OTRO')return $('#g_ncf').value.trim().toUpperCase();const n=$('#g_ncf').value.replace(/[^0-9]/g,'');return n?$('#g_ncfp').value+n:''})(), partida:$('#g_part').value,
     monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value,
     fotos:S.fotosTmp};
   if(!d.monto_total) return toast('Enter the net or gross amount');
@@ -802,9 +804,9 @@ function vSuplidores(){
 }
 function listaSup(){
   const q=S.qs.toLowerCase();
-  const ss=S.suplidores.filter(s=>!q||[s.nombre,s.documento,s.telefono,s.profesion,s.notas].join(' ').toLowerCase().includes(q));
+  const ss=S.suplidores.filter(s=>!q||[s.nombre,s.apodo,s.documento,s.telefono,s.profesion,s.notas].join(' ').toLowerCase().includes(q));
   return ss.map(s=>`<div class="card item" onclick="formSup('${s.id}')">
-    <div><div class="t">${esc(s.nombre)}</div>
+    <div><div class="t">${esc(s.nombre)}${s.apodo?` <span class="s">“${esc(s.apodo)}”</span>`:''}</div>
       <div class="s"><span class="tag ${s.tipo==='empresa'?'':'p'}">${s.tipo==='empresa'?'Company':'Individual'}</span>${s.tipo==='particular'&&s.profesion?esc(s.profesion)+' · ':''}${s.documento?(s.tipo==='empresa'?'RNC ':'ID ')+esc(s.documento):''}</div>
       ${s.telefono?`<div class="s">${ic('phone',14)} ${esc(s.telefono)}</div>`:''}</div>
     <div class="amt">${fmt(compradoA(s))}<div class="s">purchased</div></div>
@@ -822,7 +824,7 @@ function formSup(id){
       <option value="empresa" ${s.tipo==='empresa'?'selected':''}>Company</option><option value="particular" ${s.tipo==='particular'?'selected':''}>Individual</option></select></div>
     <div><label id="s_doclbl">${s.tipo==='empresa'?'RNC':'ID / Passport'}</label><input id="s_doc" value="${esc(s.documento)}"></div>
   </div>
-  <div id="s_profw" ${s.tipo==='particular'?'':'hidden'}><label>Profession</label><input id="s_prof" value="${esc(s.profesion)}"></div>
+  <div id="s_profw" ${s.tipo==='particular'?'':'hidden'}><div class="row"><div><label>Nickname</label><input id="s_apo" value="${esc(s.apodo)}"></div><div><label>Profession</label><input id="s_prof" value="${esc(s.profesion)}"></div></div></div>
   <div class="row">
     <div><label>Phone</label><input id="s_tel" type="tel" value="${esc(s.telefono)}"></div>
     <div><label>Email</label><input id="s_cor" type="email" autocapitalize="off" value="${esc(s.correo)}"></div>
@@ -848,6 +850,7 @@ async function guardarSup(id){
   const tipo=$('#s_tipo').value, raw=$('#s_doc').value;
   const d={nombre:$('#s_nom').value.trim(), tipo, documento:tipo==='empresa'?raw.replace(/[^0-9]/g,''):alnum(raw),
     profesion:tipo==='particular'?($('#s_prof').value.trim()||null):null,
+    apodo:tipo==='particular'?($('#s_apo').value.trim()||null):null,
     telefono:$('#s_tel').value.trim(), correo:$('#s_cor').value.trim(), direccion:$('#s_dir').value.trim(),
     banco:$('#s_ban').value.trim(), cuenta_banco:$('#s_cta').value.trim(), notas:$('#s_not').value, fotos:S.fotosTmp};
   if(!d.nombre) return toast('Enter the supplier name');
@@ -869,7 +872,7 @@ async function borrarSup(id){
 function vEmpleados(){
   return `<div class="h"><h2>${S.empleados.filter(e=>e.activo).length} active</h2><button class="btn sm" onclick="formEmpleado()">+ Employee</button></div>
   ${S.empleados.map(e=>`<div class="card item" onclick="formEmpleado('${e.id}')">
-    <div><div class="t">${esc(e.nombre)} ${e.activo?'':'<span class="tag p">Inactive</span>'}</div>
+    <div><div class="t">${esc(e.nombre)}${e.apodo?` <span class="s">“${esc(e.apodo)}”</span>`:''} ${e.activo?'':'<span class="tag p">Inactive</span>'}</div>
       <div class="s">${esc(e.puesto||'')}</div>
       ${pendAdel(e.id)?`<div class="s neg">Pending advances: ${fmt(pendAdel(e.id))}</div>`:''}</div>
     <div class="amt">${fmt(e.sueldo)}<div class="s">${PAY_LBL[e.tipo_sueldo]||e.tipo_sueldo}</div></div>
@@ -880,7 +883,7 @@ function formEmpleado(id){
   const ads=S.adelantos.filter(a=>a.empleado_id===id).sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
   S.fotosTmp=[...(e.fotos||[])]; S.fotosDir='empleados/';
   abrir(`<h2>${id?'Edit':'New'} employee</h2>
-  <label>Name</label><input id="e_nom" value="${esc(e.nombre)}">
+  <div class="row"><div><label>Name</label><input id="e_nom" value="${esc(e.nombre)}"></div><div><label>Nickname</label><input id="e_apo" value="${esc(e.apodo)}"></div></div>
   <div class="row"><div><label>ID / Passport</label><input id="e_ced" value="${esc(e.cedula)}"></div><div><label>Phone</label><input id="e_tel" type="tel" value="${esc(e.telefono)}"></div></div>
   <label>Position</label><input id="e_pue" value="${esc(e.puesto)}">
   <div class="row"><div><label>Pay type</label><select id="e_tipo" onchange="$('#e_hint').textContent=SAL_HINT[this.value]||''">${Object.entries(PAY_LBL).map(([k,l])=>`<option value="${k}" ${e.tipo_sueldo===k?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -901,7 +904,7 @@ function formEmpleado(id){
   pintarFotos();
 }
 async function guardarEmpleado(id){
-  const d={nombre:$('#e_nom').value.trim(),cedula:alnum($('#e_ced').value),telefono:$('#e_tel').value.trim(),puesto:$('#e_pue').value.trim(),
+  const d={nombre:$('#e_nom').value.trim(),apodo:$('#e_apo').value.trim()||null,cedula:alnum($('#e_ced').value),telefono:$('#e_tel').value.trim(),puesto:$('#e_pue').value.trim(),
     tipo_sueldo:$('#e_tipo').value,sueldo:num('#e_sue'),activo:$('#e_act').checked,fotos:S.fotosTmp};
   if(!d.nombre) return toast('Enter the employee name');
   await limpiarFotos(S.empleados.find(x=>x.id===id)?.fotos, d.fotos);
