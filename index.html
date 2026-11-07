@@ -21,7 +21,11 @@ header h1{font-size:18px;margin:0}
 header button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:14px;margin-left:6px}
 main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
+.fotos{display:flex;flex-wrap:wrap;gap:8px}
+.foto{position:relative;width:96px;height:96px}
+.foto img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--bd);background:#ddd}
+.foto button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--bad);color:#fff;font-size:12px}
+nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:10px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button .i{font-size:20px}
 nav button.on{color:var(--pri);font-weight:600}
 .card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -130,7 +134,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 
 /* ---------- Datos ---------- */
 async function cargar(){
-  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina'};
+  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores'};
   const keys = Object.keys(tablas);
   const res = await Promise.all(keys.map(k => sb.from(tablas[k]).select('*').range(0,9999)));
   for(let i=0;i<keys.length;i++){
@@ -140,6 +144,7 @@ async function cargar(){
   S.obras.sort((a,b)=>(a.estado==='activa'?0:1)-(b.estado==='activa'?0:1) || a.nombre.localeCompare(b.nombre));
   S.gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha) || String(b.creado).localeCompare(String(a.creado)));
   S.empleados.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  S.suplidores.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   S.pagos.sort((a,b)=>String(b.fecha_pago).localeCompare(String(a.fecha_pago)));
   render();
 }
@@ -157,11 +162,11 @@ async function borrar(t,id){
 }
 
 /* ---------- Navegación ---------- */
-const TABS=[['inicio','🏠','Inicio'],['gastos','🧾','Gastos'],['notas','📝','Notas'],['personal','👷','Personal'],['obras','🏗️','Obras']];
+const TABS=[['inicio','🏠','Inicio'],['gastos','🧾','Gastos'],['suplidores','🏪','Suplidores'],['notas','📝','Notas'],['personal','👷','Personal'],['obras','🏗️','Obras']];
 function ir(t){ S.tab=t; render(); window.scrollTo(0,0); }
 function render(){
   $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')"><span class="i">${i}</span>${l}</button>`).join('');
-  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,notas:vNotas,personal:vPersonal,obras:vObras})[S.tab]();
+  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,suplidores:vSuplidores,notas:vNotas,personal:vPersonal,obras:vObras})[S.tab]();
 }
 
 /* ---------- Inicio ---------- */
@@ -246,7 +251,11 @@ function formGasto(id){
   <div id="g_obraw" ${g.tipo!=='obra'?'hidden':''}><label>Obra</label><select id="g_obra">${obraOpts(g.obra_id)}</select></div>
   <label>Descripción</label><input id="g_desc" value="${esc(g.descripcion)}">
   <div class="row">
-    <div><label>Suplidor</label><input id="g_sup" list="dl_sup" value="${esc(g.suplidor)}" onchange="autoRnc()"></div>
+    <div><label>Suplidor</label><select id="g_supid" onchange="elegirSup()">
+      <option value="">${S.suplidores.length?'— Elegir suplidor —':'— No hay suplidores —'}</option>
+      ${S.suplidores.map(s=>`<option value="${s.id}" ${s.id===g.suplidor_id?'selected':''}>${esc(s.nombre)}</option>`).join('')}
+      <option value="otro" ${!g.suplidor_id&&g.suplidor?'selected':''}>Otro (escribir)</option></select>
+      <input id="g_sup" style="margin-top:6px" placeholder="Nombre del suplidor" value="${esc(g.suplidor)}" ${!g.suplidor_id&&g.suplidor?'':'hidden'}></div>
     <div><label>RNC / Cédula</label><input id="g_rnc" inputmode="numeric" value="${esc(g.rnc)}"></div>
   </div>
   <div class="row">
@@ -261,7 +270,6 @@ function formGasto(id){
   <label>Monto con ITBIS (total)</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
   <div class="s">Puedes poner el monto sin ITBIS o el total; el resto se calcula solo.</div>
   <label>Método de pago</label><select id="g_met">${['','Efectivo','Transferencia','Tarjeta','Cheque','Crédito'].map(m=>`<option value="${m}" ${g.metodo_pago===m?'selected':''}>${m||'—'}</option>`).join('')}</select>
-  <datalist id="dl_sup">${sups.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
   <datalist id="dl_part">${partidas.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
   <div class="row" style="margin-top:16px">
     ${id?`<button class="btn bad" onclick="borrar('gastos','${id}')">Borrar</button>`:''}
@@ -269,9 +277,13 @@ function formGasto(id){
     <button class="btn" onclick="guardarGasto('${id||''}')">Guardar</button>
   </div>`);
 }
-function autoRnc(){
-  const s=$('#g_sup').value.trim(); if(!s||$('#g_rnc').value) return;
-  const prev=S.gastos.find(g=>g.suplidor===s&&g.rnc); if(prev) $('#g_rnc').value=prev.rnc;
+function elegirSup(){
+  const v=$('#g_supid').value;
+  $('#g_sup').hidden = v!=='otro';
+  if(v==='otro'){ $('#g_sup').value=''; $('#g_rnc').value=''; $('#g_sup').focus(); return; }
+  const s=S.suplidores.find(x=>x.id===v);
+  $('#g_sup').value = s ? s.nombre : '';
+  $('#g_rnc').value = s ? (s.documento||'') : '';
 }
 function calc(src){
   const lleva=$('#g_lleva').checked;
@@ -283,13 +295,124 @@ function calc(src){
 async function guardarGasto(id){
   const tipo=$('#g_tipo').value;
   const d={fecha:$('#g_fecha').value||hoy(), tipo, obra_id:tipo==='obra'?($('#g_obra').value||null):null,
-    descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(), rnc:$('#g_rnc').value.replace(/[^0-9]/g,''),
+    descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(),
+    suplidor_id:($('#g_supid').value&&$('#g_supid').value!=='otro')?$('#g_supid').value:null, rnc:$('#g_rnc').value.replace(/[^0-9]/g,''),
     ncf:$('#g_ncf').value.trim().toUpperCase(), partida:$('#g_part').value.trim(),
     monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value};
   if(!d.monto_total) return toast('Pon el monto del gasto');
   if(d.ncf){ const dup=S.gastos.find(g=>g.id!==id&&g.ncf===d.ncf&&(g.rnc||'')===d.rnc);
     if(dup && !confirm(`Ya existe un gasto con ese NCF (${fecha(dup.fecha)}, ${dup.suplidor||''}). ¿Guardar de todos modos?`)) return; }
   await guardar('gastos',id,d);
+}
+
+/* ---------- Suplidores ---------- */
+const BANCOS=['Banreservas','Banco Popular','BHD','Scotiabank','Banco Santa Cruz','Promerica','Banesco','Banco Caribe','BDI','Banco Vimenca','Banco López de Haro','Banco Lafise','Asociación Popular (APAP)','Asociación Cibao','Asociación La Nacional'];
+const compradoA = s => sum(S.gastos.filter(g=>g.suplidor_id===s.id||(!g.suplidor_id&&g.suplidor&&g.suplidor===s.nombre)),g=>g.monto_total);
+S.qs='';
+function vSuplidores(){
+  return `<div class="row" style="margin-bottom:10px">
+    <input type="search" placeholder="Buscar suplidor…" value="${esc(S.qs)}" oninput="S.qs=this.value;$('#slist').innerHTML=listaSup()">
+    <button class="btn" style="flex:0 0 auto" onclick="formSup()">+ Suplidor</button></div>
+  <div id="slist">${listaSup()}</div>`;
+}
+function listaSup(){
+  const q=S.qs.toLowerCase();
+  const ss=S.suplidores.filter(s=>!q||[s.nombre,s.documento,s.telefono,s.notas].join(' ').toLowerCase().includes(q));
+  return ss.map(s=>`<div class="card item" onclick="formSup('${s.id}')">
+    <div><div class="t">${esc(s.nombre)}</div>
+      <div class="s"><span class="tag ${s.tipo==='empresa'?'':'p'}">${s.tipo==='empresa'?'Empresa':'Particular'}</span>${s.documento?(s.tipo==='empresa'?'RNC ':'Céd. ')+esc(s.documento):''}</div>
+      ${s.telefono?`<div class="s">📞 ${esc(s.telefono)}</div>`:''}</div>
+    <div class="amt">${fmt(compradoA(s))}<div class="s">comprado</div></div>
+  </div>`).join('') || '<div class="empty">No hay suplidores todavía.</div>';
+}
+function formSup(id){
+  const s=S.suplidores.find(x=>x.id===id)||{tipo:'empresa',fotos:[]};
+  S.fotosTmp=[...(s.fotos||[])];
+  const gs=id?S.gastos.filter(g=>g.suplidor_id===id).slice(0,10):[];
+  abrir(`<h2>${id?'Editar':'Nuevo'} suplidor</h2>
+  <label>Nombre</label><input id="s_nom" value="${esc(s.nombre)}">
+  <div class="row">
+    <div><label>Tipo</label><select id="s_tipo" onchange="$('#s_doclbl').textContent=this.value==='empresa'?'RNC':'Cédula'">
+      <option value="empresa" ${s.tipo==='empresa'?'selected':''}>Empresa</option><option value="particular" ${s.tipo==='particular'?'selected':''}>Particular</option></select></div>
+    <div><label id="s_doclbl">${s.tipo==='empresa'?'RNC':'Cédula'}</label><input id="s_doc" inputmode="numeric" value="${esc(s.documento)}"></div>
+  </div>
+  <div class="row">
+    <div><label>Teléfono</label><input id="s_tel" type="tel" value="${esc(s.telefono)}"></div>
+    <div><label>Correo</label><input id="s_cor" type="email" autocapitalize="off" value="${esc(s.correo)}"></div>
+  </div>
+  <label>Dirección</label><input id="s_dir" value="${esc(s.direccion)}">
+  <div class="row">
+    <div><label>Banco</label><input id="s_ban" list="dl_ban" value="${esc(s.banco)}"></div>
+    <div><label>Número de cuenta</label><input id="s_cta" inputmode="numeric" value="${esc(s.cuenta_banco)}"></div>
+  </div>
+  <datalist id="dl_ban">${BANCOS.map(b=>`<option value="${b}">`).join('')}</datalist>
+  <label>Notas</label><textarea id="s_not" style="min-height:90px">${esc(s.notas)}</textarea>
+  <label>Fotos (cara, cédula, pasaporte…)</label>
+  <div id="s_fotos" class="fotos"></div>
+  <label class="btn sec" style="display:inline-block;margin-top:6px;color:var(--pri);font-size:14px">📷 Agregar foto<input type="file" accept="image/*" multiple hidden onchange="subirFotos(this)"></label>
+  <span id="s_subiendo" class="s"></span>
+  <div class="row" style="margin-top:16px">
+    ${id?`<button class="btn bad" onclick="borrarSup('${id}')">Borrar</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancelar</button>
+    <button class="btn" onclick="guardarSup('${id||''}')">Guardar</button>
+  </div>
+  ${gs.length?`<div class="card" style="margin-top:16px"><div class="h"><h2>Últimos gastos</h2></div>
+    ${gs.map(g=>`<div class="asis"><div class="nm">${fecha(g.fecha)} · ${esc(g.descripcion||nomObra(g.obra_id)||'')}</div><b>${fmtN(g.monto_total)}</b></div>`).join('')}</div>`:''}`);
+  pintarFotos();
+}
+async function pintarFotos(){
+  const box=$('#s_fotos'); if(!box) return;
+  if(!S.fotosTmp.length){ box.innerHTML='<div class="s">Sin fotos</div>'; return; }
+  const {data}=await sb.storage.from('suplidores').createSignedUrls(S.fotosTmp,3600);
+  box.innerHTML=S.fotosTmp.map((p,i)=>{const u=data?.[i]?.signedUrl||'';
+    return `<div class="foto"><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="foto"></a><button onclick="quitarFoto(${i})">✕</button></div>`}).join('');
+}
+function reducir(file){
+  return new Promise((ok,mal)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{const max=1600,k=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?ok(b):mal(new Error('No se pudo procesar la foto')),'image/jpeg',0.82);};
+    img.onerror=()=>{URL.revokeObjectURL(url); mal(new Error('Formato de foto no soportado'));};
+    img.src=url;
+  });
+}
+async function subirFotos(input){
+  const files=[...input.files]; input.value='';
+  for(const f of files){
+    $('#s_subiendo').textContent=' Subiendo…';
+    try{
+      const blob=await reducir(f);
+      const path=`${crypto.randomUUID()}.jpg`;
+      const {error}=await sb.storage.from('suplidores').upload(path,blob,{contentType:'image/jpeg'});
+      if(error) throw error;
+      S.fotosTmp.push(path);
+    }catch(e){ toast('Error subiendo foto: '+e.message); }
+  }
+  $('#s_subiendo').textContent=' Recuerda tocar Guardar.';
+  pintarFotos();
+}
+function quitarFoto(i){ S.fotosTmp.splice(i,1); pintarFotos(); }
+async function guardarSup(id){
+  const d={nombre:$('#s_nom').value.trim(), tipo:$('#s_tipo').value, documento:$('#s_doc').value.replace(/[^0-9]/g,''),
+    telefono:$('#s_tel').value.trim(), correo:$('#s_cor').value.trim(), direccion:$('#s_dir').value.trim(),
+    banco:$('#s_ban').value.trim(), cuenta_banco:$('#s_cta').value.trim(), notas:$('#s_not').value, fotos:S.fotosTmp};
+  if(!d.nombre) return toast('Pon el nombre del suplidor');
+  const largo=d.tipo==='empresa'?[9,11]:[11];
+  if(d.documento && !largo.includes(d.documento.length) && !confirm(`El ${d.tipo==='empresa'?'RNC':'número de cédula'} tiene ${d.documento.length} dígitos. ¿Guardar de todos modos?`)) return;
+  const viejas=(S.suplidores.find(x=>x.id===id)?.fotos||[]).filter(p=>!d.fotos.includes(p));
+  if(viejas.length) await sb.storage.from('suplidores').remove(viejas);
+  await guardar('suplidores',id,d);
+}
+async function borrarSup(id){
+  const s=S.suplidores.find(x=>x.id===id);
+  if(S.gastos.some(g=>g.suplidor_id===id)) return toast('Este suplidor tiene gastos registrados; no se puede borrar.');
+  if(!confirm(`¿Borrar a ${s.nombre}?`)) return;
+  const {error}=await sb.from('suplidores').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  if(s.fotos?.length) await sb.storage.from('suplidores').remove(s.fotos);
+  cerrar(); await cargar(); toast('Borrado');
 }
 
 /* ---------- Notas ---------- */
@@ -485,6 +608,7 @@ async function exportar(soloFiltrados){
     XLSX.utils.book_append_sheet(wb,hoja(S.obras.map(o=>{const c=costoObra(o.id);return {Obra:o.nombre,Cliente:o.cliente||'',Estado:o.estado,'Gastos (con ITBIS)':r2(c.g),'ITBIS':r2(sum(S.gastos.filter(g=>g.obra_id===o.id),g=>g.itbis)),'Nómina':r2(c.n),'Costo total':r2(c.g+c.n)}})),'Resumen por obra');
     XLSX.utils.book_append_sheet(wb,hoja(S.pagos.map(p=>({'Fecha de pago':fecha(p.fecha_pago),Empleado:nomEmp(p.empleado_id),Obra:nomObra(p.obra_id),Desde:fecha(p.desde),Hasta:fecha(p.hasta),'Días':Number(p.dias_trabajados)||0,Bruto:Number(p.bruto)||0,Descuentos:Number(p.descuentos)||0,Neto:Number(p.neto)||0}))),'Nómina');
     XLSX.utils.book_append_sheet(wb,hoja(S.asistencia.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(a=>({Fecha:fecha(a.fecha),Empleado:nomEmp(a.empleado_id),Obra:nomObra(a.obra_id),Presente:a.presente?'Sí':'No','Horas extra':Number(a.horas_extra)||0}))),'Asistencia');
+    XLSX.utils.book_append_sheet(wb,hoja(S.suplidores.map(s=>({Nombre:s.nombre,Tipo:s.tipo==='empresa'?'Empresa':'Particular','RNC / Cédula':s.documento||'','Teléfono':s.telefono||'','Dirección':s.direccion||'',Correo:s.correo||'',Banco:s.banco||'','Cuenta':s.cuenta_banco||'','Total comprado':r2(compradoA(s)),Notas:s.notas||''}))),'Suplidores');
     XLSX.utils.book_append_sheet(wb,hoja(S.empleados.map(e=>({Nombre:e.nombre,'Cédula':e.cedula||'','Teléfono':e.telefono||'',Puesto:e.puesto||'',Obra:nomObra(e.obra_id),'Tipo de sueldo':e.tipo_sueldo,Sueldo:Number(e.sueldo)||0,Activo:e.activo?'Sí':'No','Adelantos pendientes':pendAdel(e.id)}))),'Empleados');
     XLSX.utils.book_append_sheet(wb,hoja(S.notas.map(n=>({Fecha:fecha(n.creado),Obra:nomObra(n.obra_id)||'General','Título':n.titulo||'',Contenido:n.contenido||''}))),'Notas');
   }
