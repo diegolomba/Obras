@@ -343,6 +343,8 @@ function formGasto(id){
   const otro = !g.suplidor_id && !!g.suplidor;
   S.fotosTmp=[...(g.fotos||[])]; S.fotosDir='facturas/';
   abrir(`<h2>${id?'Edit':'New'} expense</h2>
+  <label class="addfoto" style="margin-bottom:10px">${ic('camera',20)} Scan invoice<input type="file" accept="image/*" hidden onchange="escanearFactura(this)"></label>
+  <span id="s_scan" class="s"></span>
   <div class="row">
     <div><label>Date</label><input type="date" id="g_fecha" value="${g.fecha}"></div>
     <div><label>Type</label><select id="g_tipo" onchange="$('#g_obraw').hidden=this.value!=='obra'"><option value="obra" ${g.tipo==='obra'?'selected':''}>Project</option><option value="personal" ${g.tipo==='personal'?'selected':''}>Personal</option></select></div>
@@ -357,10 +359,8 @@ function formGasto(id){
       <input id="g_sup" style="margin-top:6px" placeholder="Supplier name" value="${esc(g.suplidor)}" ${otro?'':'hidden'}></div>
     <div><label>RNC / ID</label><input id="g_rnc" value="${esc(g.rnc)}"></div>
   </div>
-  <div class="row">
     <div><label>NCF</label><div style="display:flex;gap:6px"><select id="g_ncfp" style="width:84px;flex:none" onchange="ncfModo()">${(()=>{const m=String(g.ncf||'').toUpperCase().match(/^([A-Z]\d{2})(\d*)$/);g._p=m?m[1]:(g.ncf?'OTRO':'B01');g._n=m?m[2]:String(g.ncf||'');return ['B01','B02','E31','E32','B03','B04','B11','B12','B13','B14','B15','B16','B17','E33','E34','E41','E43','E44','E45','E46','E47','OTRO'].map(x=>`<option value="${x}" ${x===g._p?'selected':''}>${x==='OTRO'?'Other':x}</option>`).join('')})()}</select><input id="g_ncf" inputmode="${g._p==='OTRO'?'text':'numeric'}" autocapitalize="characters" placeholder="00000001" value="${esc(g._n)}"></div></div>
     <div><label>Category</label><select id="g_part"><option value="">${S.partidas.length?'— Select —':'— Add categories in Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
-  </div>
   <div class="row">
     <label class="chk"><input type="checkbox" id="g_lleva" ${lleva?'checked':''} onchange="calc('sin')"> ITBIS 18%</label>
     <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> Tip 10%</label>
@@ -379,6 +379,45 @@ function formGasto(id){
     <button class="btn" onclick="guardarGasto('${id||''}')">Save</button>
   </div>`);
   pintarFotos();
+}
+const b64 = blob => new Promise((ok,mal)=>{const r=new FileReader(); r.onload=()=>ok(String(r.result).split(',')[1]); r.onerror=mal; r.readAsDataURL(blob);});
+async function escanearFactura(input){
+  const f=input.files[0]; input.value=''; if(!f) return;
+  const st=$('#s_scan'); st.textContent=' Reading invoice…';
+  try{
+    const blob=await reducir(f);
+    const path=`${S.fotosDir}${crypto.randomUUID()}.jpg`;
+    const up=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});
+    if(!up.error){ S.fotosTmp.push(path); pintarFotos(); }
+    const {data,error}=await sb.functions.invoke('scan-invoice',{body:{image:await b64(blob),media_type:'image/jpeg'}});
+    if(error) throw error;
+    if(!data||data.error) throw new Error(data?.error||'No data returned');
+    llenarGasto(data);
+    st.textContent=' Review the data and tap Save.';
+  }catch(e){ st.textContent=''; toast('Scan error: '+(e.message||e)); }
+}
+function llenarGasto(d){
+  const set=(id,v)=>{ const el=$(id); if(v!==null&&v!==undefined&&v!==''){ el.value=v; el.style.outline=''; } else if(!el.value) el.style.outline='2px solid #d9a400'; };
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||'')) set('#g_fecha',d.fecha); else $('#g_fecha').style.outline='2px solid #d9a400';
+  if(d.descripcion && !$('#g_desc').value) $('#g_desc').value=d.descripcion;
+  const rnc=String(d.rnc||'').replace(/[^0-9]/g,'');
+  const nom=String(d.suplidor||'').trim().toLowerCase();
+  const s=S.suplidores.find(x=>rnc&&String(x.documento||'').replace(/[^0-9]/g,'')===rnc) || S.suplidores.find(x=>nom&&x.nombre.toLowerCase()===nom);
+  if(s){ $('#g_supid').value=s.id; elegirSup(); }
+  else if(d.suplidor||rnc){ $('#g_supid').value='otro'; $('#g_sup').hidden=false; $('#g_sup').value=d.suplidor||''; $('#g_rnc').value=rnc; }
+  if(rnc && s && !$('#g_rnc').value) $('#g_rnc').value=rnc;
+  if(!$('#g_rnc').value) $('#g_rnc').style.outline='2px solid #d9a400'; else $('#g_rnc').style.outline='';
+  const ncf=String(d.ncf||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const m=ncf.match(/^([A-Z]\d{2})(\d+)$/);
+  if(m && [...$('#g_ncfp').options].some(o=>o.value===m[1])){ $('#g_ncfp').value=m[1]; $('#g_ncf').value=m[2]; $('#g_ncf').style.outline=''; }
+  else if(ncf){ $('#g_ncfp').value='OTRO'; ncfModo(); $('#g_ncf').value=ncf; }
+  else $('#g_ncf').style.outline='2px solid #d9a400';
+  const n=x=>{const v=parseFloat(x); return isFinite(v)&&v>0?v:0;};
+  const tot=n(d.total), sin=n(d.subtotal), it=n(d.itbis), pr=n(d.propina);
+  $('#g_lleva').checked=it>0; $('#g_llevap').checked=pr>0;
+  if(sin){ $('#g_sin').value=r2(sin); $('#g_itbis').value=it?r2(it):''; $('#g_prop').value=pr?r2(pr):''; $('#g_tot').value=tot?r2(tot):r2(sin+it+pr); }
+  else if(tot){ if(!it&&!pr){ $('#g_lleva').checked=false; } $('#g_tot').value=r2(tot); calc('tot'); }
+  if(!$('#g_tot').value) $('#g_tot').style.outline='2px solid #d9a400'; else $('#g_tot').style.outline='';
 }
 function elegirSup(){
   const v=$('#g_supid').value;
