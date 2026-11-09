@@ -24,6 +24,8 @@ header{position:sticky;top:0;background:var(--hdr);color:#fff;padding:calc(env(s
 header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:2px}
 header button{background:none;color:#fff;border:0;padding:6px;display:flex;align-items:center}
 header .izq{display:flex;align-items:center;gap:8px}
+header select.emp{width:auto;max-width:170px;margin:0 0 0 4px;padding:5px 24px 5px 10px;font-size:13px;border-radius:9px;background-color:rgba(255,255,255,.14);color:#fff;border:0}
+header select.emp option{color:#000}
 header svg.ic{width:26px;height:26px}
 main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
@@ -118,7 +120,7 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 
 <div id="app" hidden>
   <header>
-    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>CMS</h1></div>
+    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>CMS</h1><select class="emp" id="b_emp" onchange="cambiarEmp(this.value)"></select></div>
     <button onclick="recargar()" aria-label="Refresh" id="b_ref"></button>
   </header>
   <main id="view"><div class="empty">Loading…</div></main>
@@ -214,6 +216,12 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 /* ---------- Data ---------- */
+const EMPRESAS=[['diagus','Diagus Distribuidora'],['nenos','Nenos SRL']];
+S.emp=(()=>{try{const v=localStorage.getItem('cms_emp');return EMPRESAS.some(e=>e[0]===v)?v:'diagus'}catch(e){return 'diagus'}})();
+const delaEmp=x=>(x.empresa||'diagus')===S.emp;
+function pintarEmp(){ const b=$('#b_emp'); if(b) b.innerHTML=EMPRESAS.map(([k,l])=>`<option value="${k}" ${k===S.emp?'selected':''}>${l}</option>`).join(''); }
+async function cambiarEmp(v){ S.emp=v; try{localStorage.setItem('cms_emp',v)}catch(e){} S.f={tipo:'',obra:'',desde:'',hasta:'',q:''}; await cargar(); }
+const divisionDe=g=>g.division||((g.tipo==='obra'||g.obra_id)?'Constructora':'Distribuidora');
 async function cargar(){
   const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas'};
   const keys = Object.keys(tablas);
@@ -222,6 +230,11 @@ async function cargar(){
     if(res[i].error){ toast('Error loading '+tablas[keys[i]]+': '+res[i].error.message); continue; }
     S[keys[i]] = res[i].data || [];
   }
+  for(const k of ['obras','gastos','notas','empleados','suplidores','partidas']) S[k]=S[k].filter(delaEmp);
+  const ide=new Set(S.empleados.map(e=>e.id)), idn=new Set(S.notas.map(n=>n.id));
+  for(const k of ['asistencia','adelantos','pagos']) S[k]=S[k].filter(x=>ide.has(x.empleado_id));
+  S.tareas=S.tareas.filter(x=>idn.has(x.nota_id));
+  pintarEmp();
   S.obras.sort((a,b)=>(a.estado==='activa'?0:1)-(b.estado==='activa'?0:1) || a.nombre.localeCompare(b.nombre));
   S.gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha) || String(b.creado).localeCompare(String(a.creado)));
   S.empleados.sort((a,b)=>a.nombre.localeCompare(b.nombre));
@@ -231,7 +244,9 @@ async function cargar(){
   render();
 }
 async function recargar(){ await cargar(); toast('Updated'); }
+const CON_EMP=['obras','gastos','notas','empleados','suplidores','partidas'];
 async function guardar(t,id,d){
+  if(!id && CON_EMP.includes(t)) d={...d,empresa:S.emp};
   const {error} = id ? await sb.from(t).update(d).eq('id',id) : await sb.from(t).insert(d);
   if(error) return toast('Error: '+error.message);
   cerrar(); await cargar(); toast('Saved');
@@ -361,6 +376,7 @@ function formGasto(id){
   </div>
     <div><label>NCF</label><div style="display:flex;gap:6px"><select id="g_ncfp" style="width:84px;flex:none" onchange="ncfModo()">${(()=>{const m=String(g.ncf||'').toUpperCase().match(/^([A-Z]\d{2})(\d*)$/);g._p=m?m[1]:(g.ncf?'OTRO':'B01');g._n=m?m[2]:String(g.ncf||'');return ['B01','B02','E31','E32','B03','B04','B11','B12','B13','B14','B15','B16','B17','E33','E34','E41','E43','E44','E45','E46','E47','OTRO'].map(x=>`<option value="${x}" ${x===g._p?'selected':''}>${x==='OTRO'?'Other':x}</option>`).join('')})()}</select><input id="g_ncf" inputmode="${g._p==='OTRO'?'text':'numeric'}" autocapitalize="characters" placeholder="00000001" value="${esc(g._n)}"></div></div>
     <div><label>Category</label><select id="g_part"><option value="">${S.partidas.length?'— Select —':'— Add categories in Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+  ${S.emp==='diagus'?`<div><label>Division</label><select id="g_div"><option value="Constructora" ${divisionDe(g)==='Constructora'?'selected':''}>Constructora</option><option value="Distribuidora" ${divisionDe(g)==='Distribuidora'?'selected':''}>Distribuidora</option></select></div>`:''}
   <div class="row">
     <label class="chk"><input type="checkbox" id="g_lleva" ${lleva?'checked':''} onchange="calc('sin')"> ITBIS 18%</label>
     <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> Tip 10%</label>
@@ -401,7 +417,7 @@ async function escanearFactura(input){
 function llenarGasto(d){
   const set=(id,v)=>{ const el=$(id); if(v!==null&&v!==undefined&&v!==''){ el.value=v; el.style.outline=''; } else if(!el.value) el.style.outline='2px solid #d9a400'; };
   if(/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||'')) set('#g_fecha',d.fecha); else $('#g_fecha').style.outline='2px solid #d9a400';
-  if(d.descripcion && !$('#g_desc').value) $('#g_desc').value=d.descripcion;
+  if(d.descripcion && !$('#g_desc').value){ let ds=String(d.descripcion).trim(); if(ds.length>40) ds=ds.slice(0,40).replace(/\s+\S*$/,''); $('#g_desc').value=ds; }
   const rnc=String(d.rnc||'').replace(/[^0-9]/g,'');
   const nom=String(d.suplidor||'').trim().toLowerCase();
   const s=S.suplidores.find(x=>rnc&&String(x.documento||'').replace(/[^0-9]/g,'')===rnc) || S.suplidores.find(x=>nom&&x.nombre.toLowerCase()===nom);
@@ -448,7 +464,7 @@ function calc(src){
 async function guardarGasto(id){
   const tipo=$('#g_tipo').value, supid=$('#g_supid').value;
   const d={fecha:$('#g_fecha').value||hoy(), tipo, obra_id:tipo==='obra'?($('#g_obra').value||null):null,
-    descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(),
+    descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(), division:S.emp==='diagus'?$('#g_div').value:null,
     suplidor_id:(supid&&supid!=='otro')?supid:null, rnc:alnum($('#g_rnc').value),
     ncf:(()=>{if($('#g_ncfp').value==='OTRO')return $('#g_ncf').value.trim().toUpperCase();const n=$('#g_ncf').value.replace(/[^0-9]/g,'');return n?$('#g_ncfp').value+n:''})(), partida:$('#g_part').value,
     monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value,
@@ -626,7 +642,7 @@ function nuevaNota(){
 }
 async function crearNota(){
   const d={titulo:$('#n_tit').value.trim()||'Untitled', obra_id:$('#n_obra').value||null, contenido:$('#n_txt').value};
-  const {data,error}=await sb.from('notas').insert(d).select().single();
+  const {data,error}=await sb.from('notas').insert({...d,empresa:S.emp}).select().single();
   if(error) return toast('Error: '+error.message);
   S.notas.push(data); render(); abrirNota(data.id);
 }
@@ -1018,7 +1034,7 @@ function vPartidas(){
 }
 async function agregarPartida(){
   const nombre=$('#p_nueva').value.trim(); if(!nombre) return;
-  const {error}=await sb.from('partidas').insert({nombre});
+  const {error}=await sb.from('partidas').insert({nombre,empresa:S.emp});
   if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
   await cargar(); toast('Category added');
 }
@@ -1028,7 +1044,7 @@ async function renombrarPartida(id){
   if(!nuevo||nuevo===p.nombre) return;
   const {error}=await sb.from('partidas').update({nombre:nuevo}).eq('id',id);
   if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
-  await sb.from('gastos').update({partida:nuevo}).eq('partida',p.nombre);
+  await sb.from('gastos').update({partida:nuevo}).eq('partida',p.nombre).eq('empresa',S.emp);
   await cargar(); toast('Category renamed');
 }
 async function borrarPartida(id){
@@ -1039,7 +1055,7 @@ async function borrarPartida(id){
   await cargar(); toast('Category deleted');
 }
 async function partidasSugeridas(){
-  const {error}=await sb.from('partidas').insert(CATEGORIES_START.map(nombre=>({nombre})));
+  const {error}=await sb.from('partidas').insert(CATEGORIES_START.map(nombre=>({nombre,empresa:S.emp})));
   if(error) return toast('Error: '+error.message);
   await cargar(); toast('Categories added');
 }
@@ -1060,6 +1076,10 @@ function dsGastos(gs, fotosMap){
     rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Project':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
       if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
     num:[8,9,10,11], sum:[8,9,10,11], pdf:[0,4,2,3,7,6,8,9,10,11], gastos:gs};
+}
+function dsGastosDiv(gs,fotosMap){
+  if(S.emp!=='diagus') return [dsGastos(gs,fotosMap)];
+  return ['Constructora','Distribuidora'].map(dv=>{ const ds=dsGastos(gs.filter(g=>divisionDe(g)===dv),fotosMap); ds.t=dv; return ds; }).filter(ds=>ds.rows.length);
 }
 function dsResumen(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
@@ -1141,7 +1161,7 @@ async function exportarMenu(formato){
   const fotosMap=(conFotos&&sel.gastos&&formato==='xlsx')?nombresFotos(gs):null;
   const dss=[];
   if(sel.resumen) dss.push(dsResumen(d1,d2));
-  if(sel.gastos) dss.push(dsGastos(gs,fotosMap));
+  if(sel.gastos) dss.push(...dsGastosDiv(gs,fotosMap));
   if(sel.nomina) dss.push(dsNomina(d1,d2));
   if(sel.asistencia) dss.push(...dsAsistencia(d1,d2));
   if(sel.obras) dss.push(dsObras(d1,d2));
@@ -1149,7 +1169,7 @@ async function exportarMenu(formato){
   if(sel.suplidores) dss.push(dsSuplidores());
   if(sel.notas) dss.push(dsNotas(d1,d2));
   if(!dss.length) return toast('Select at least one item to export');
-  const nombre=`CM_${d1||'start'}_to_${d2||hoy()}`;
+  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_${d1||'start'}_to_${d2||hoy()}`;
   const fotosDe = (conFotos&&sel.gastos) ? gs : [];
   if(formato==='pdf') await crearPDF(dss,'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
   else await crearExcel(dss,nombre,fotosDe,fotosMap);
@@ -1165,10 +1185,10 @@ async function exportarFiltrado(formato){
   if(f.obra) partes.push('Project: '+nomObra(f.obra));
   if(f.desde||f.hasta) partes.push(textoPeriodo(f.desde,f.hasta));
   if(f.q) partes.push('Search: '+f.q);
-  const nombre=`Expenses_${hoy()}`;
+  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_Expenses_${hoy()}`;
   const fotosMap=(conFotos&&formato==='xlsx')?nombresFotos(gs):null;
-  if(formato==='pdf') await crearPDF([dsGastos(gs)],'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
-  else await crearExcel([dsGastos(gs,fotosMap)],nombre,conFotos?gs:[],fotosMap);
+  if(formato==='pdf') await crearPDF(dsGastosDiv(gs),'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
+  else await crearExcel(dsGastosDiv(gs,fotosMap),nombre,conFotos?gs:[],fotosMap);
 }
 const MONEY_FMT='"RD$" #,##0.00';
 async function crearExcel(dss,nombre,gastosFotos,fotosMap){
@@ -1208,7 +1228,7 @@ async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
   if(!window.jspdf) return toast('Could not load the PDF tool. Check your connection.');
   const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
   const alto=doc.internal.pageSize.getHeight(), ancho=doc.internal.pageSize.getWidth();
-  doc.setFontSize(14); doc.text('CMS - '+titulo,14,14);
+  doc.setFontSize(14); doc.text('CMS - '+EMPRESAS.find(e=>e[0]===S.emp)[1]+' - '+titulo,14,14);
   doc.setFontSize(9); doc.text(sub+'   |   Generated on '+fecha(hoy()),14,20);
   let y=28;
   for(const ds of dss){
