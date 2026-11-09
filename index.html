@@ -389,7 +389,9 @@ async function escanearFactura(input){
     const path=`${S.fotosDir}${crypto.randomUUID()}.jpg`;
     const up=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});
     if(!up.error){ S.fotosTmp.push(path); pintarFotos(); }
-    const {data,error}=await sb.functions.invoke('scan-invoice',{body:{image:await b64(blob),media_type:'image/jpeg'}});
+    const small=await reducir(f,1200,0.7);
+    const lim=new Promise((_,mal)=>setTimeout(()=>mal(new Error('Timed out, try again')),60000));
+    const {data,error}=await Promise.race([sb.functions.invoke('scan-invoice',{body:{image:await b64(small),media_type:'image/jpeg'}}),lim]);
     if(error) throw error;
     if(!data||data.error) throw new Error(data?.error||'No data returned');
     llenarGasto(data);
@@ -801,13 +803,13 @@ async function pintarFotos(){
   box.innerHTML=S.fotosTmp.map((p,i)=>{const u=data?.[i]?.signedUrl||'';
     return `<div class="foto"><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="photo"></a><button onclick="quitarFoto(${i})">✕</button></div>`}).join('');
 }
-function reducir(file){
+function reducir(file,max=1600,q=0.82){
   return new Promise((ok,mal)=>{
     const img=new Image(), url=URL.createObjectURL(file);
-    img.onload=()=>{const max=1600,k=Math.min(1,max/Math.max(img.width,img.height));
+    img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));
       const c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
       c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
-      c.toBlob(b=>b?ok(b):mal(new Error('Could not process the photo')),'image/jpeg',0.82);};
+      c.toBlob(b=>b?ok(b):mal(new Error('Could not process the photo')),'image/jpeg',q);};
     img.onerror=()=>{URL.revokeObjectURL(url); mal(new Error('Unsupported photo format'));};
     img.src=url;
   });
