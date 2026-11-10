@@ -32,8 +32,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid 
 nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:10px;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav button.on{color:var(--tx);font-weight:600}
 .card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1 1 130px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1 1 130px;min-width:0}
 label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+input[type=date]{min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;text-align:left;display:block}
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select{min-height:44px}
+td.n .m{display:flex;justify-content:space-between;gap:14px}
+.homebtns{display:flex;justify-content:center;align-items:flex-start;gap:26px;margin-top:14px}
+.homebtns .it{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--mut)}
+.homebtns .fab{cursor:pointer}.homebtns .fab.big{width:58px;height:58px}
+.bar{height:8px;background:#e3e5e7;border-radius:6px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--pri)}
+.thumb{width:54px;height:54px;border-radius:8px;object-fit:cover;background:#e3e5e7;flex:0 0 auto}
 input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:16px;background:#fff;color:var(--tx);font-family:inherit}
 textarea{min-height:180px;line-height:1.4}
 .btn{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:600;background:var(--pri);color:#fff;cursor:pointer}
@@ -146,6 +154,8 @@ const ICONS = {
   note:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/>',
   db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
   camera:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>',
+  scan:'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M7.5 12h9"/>',
+  scanmulti:'<path d="M8 8h11v11H8z"/><path d="M5 15V5h10"/><path d="M11.5 13.5h4M11.5 16.5h2.5"/>',
   refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
@@ -175,6 +185,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const r2 = v => Math.round((Number(v)||0)*100)/100;
 const fmtN = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt = n => 'RD$ ' + fmtN(n);
+const fmtA = n => `<span class="m"><span>RD$</span><span>${fmtN(n)}</span></span>`;
 const ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const hoy = () => ymd(new Date());
 const sumaDias = (f,n) => { const d=new Date(f+'T12:00:00'); d.setDate(d.getDate()+n); return ymd(d); };
@@ -186,10 +197,10 @@ const nomObra = id => S.obras.find(o=>o.id===id)?.nombre || '';
 function ncfModo(){ $('#g_ncf').setAttribute('inputmode',$('#g_ncfp').value==='OTRO'?'text':'numeric'); $('#g_ncf').blur(); }
 const conApodo = x => (x.nombre||'') + (x.apodo?` “${x.apodo}”`:'');
 const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
-const obraOpts = (sel, blank='— No project —') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
+const obraOpts = (sel, blank='') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
 const S = {
-  obras:[], gastos:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[],
+  obras:[], gastos:[], borradores:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[],
   tab:'inicio', sub:'asistencia', db:'suplidores', listo:false,
   f:{tipo:'',obra:'',desde:'',hasta:'',q:''},
   fn:'todas', qs:'', calMes:hoy().slice(0,7), nd:sumaDias(hoy(),-6), nh:hoy(),
@@ -216,11 +227,13 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 /* ---------- Data ---------- */
-const EMPRESAS=[['diagus','Diagus Distribuidora'],['nenos','Nenos SRL']];
+const EMPRESAS=[['diagus','Diagus Distribuidora'],['nenos','Nenos']];
+const EMP_LEGAL={diagus:{n:'Diagus Distribuidora, SRL',rnc:'132-738-642'},nenos:{n:'Nenos, SRL',rnc:'101-735-295'}};
 S.emp=(()=>{try{const v=localStorage.getItem('cms_emp');return EMPRESAS.some(e=>e[0]===v)?v:'diagus'}catch(e){return 'diagus'}})();
 const delaEmp=x=>(x.empresa||'diagus')===S.emp;
 function pintarEmp(){ const b=$('#b_emp'); if(b) b.innerHTML=EMPRESAS.map(([k,l])=>`<option value="${k}" ${k===S.emp?'selected':''}>${l}</option>`).join(''); }
 async function cambiarEmp(v){ S.emp=v; try{localStorage.setItem('cms_emp',v)}catch(e){} S.f={tipo:'',obra:'',desde:'',hasta:'',q:''}; await cargar(); }
+const gId=id=>S.gastos.find(x=>x.id===id)||S.borradores.find(x=>x.id===id);
 const divisionDe=g=>g.division||((g.tipo==='obra'||g.obra_id)?'Constructora':'Distribuidora');
 async function cargar(){
   const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas'};
@@ -231,6 +244,7 @@ async function cargar(){
     S[keys[i]] = res[i].data || [];
   }
   for(const k of ['obras','gastos','notas','empleados','suplidores','partidas']) S[k]=S[k].filter(delaEmp);
+  S.borradores=S.gastos.filter(g=>g.borrador); S.gastos=S.gastos.filter(g=>!g.borrador);
   const ide=new Set(S.empleados.map(e=>e.id)), idn=new Set(S.notas.map(n=>n.id));
   for(const k of ['asistencia','adelantos','pagos']) S[k]=S[k].filter(x=>ide.has(x.empleado_id));
   S.tareas=S.tareas.filter(x=>idn.has(x.nota_id));
@@ -305,14 +319,19 @@ function vInicio(){
   </div>
   <div class="card"><div class="h"><h2>Monthly balance</h2></div>
   <table>
-    ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmt(f.g)}</td></tr>`).join('')}
-    ${sinObra?`<tr><td><i>No project assigned</i></td><td class="n">${fmt(sinObra)}</td></tr>`:''}
-    <tr onclick="verGastos({tipo:'personal',desde:'${m}-01'})"><td>Personal</td><td class="n">${fmt(persM)}</td></tr>
-    <tr onclick="S.sub='pagos';ir('nomina')"><td>Payroll</td><td class="n">${fmt(nomM)}</td></tr>
-    <tr class="tot"><td>Total</td><td class="n">${fmt(obraM+persM+nomM)}</td></tr>
+    ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmtA(f.g)}</td></tr>`).join('')}
+    ${sinObra?`<tr><td><i>No project assigned</i></td><td class="n">${fmtA(sinObra)}</td></tr>`:''}
+    <tr onclick="verGastos({tipo:'personal',desde:'${m}-01'})"><td>Personal</td><td class="n">${fmtA(persM)}</td></tr>
+    <tr onclick="S.sub='pagos';ir('nomina')"><td>Payroll</td><td class="n">${fmtA(nomM)}</td></tr>
+    <tr class="tot"><td>Total</td><td class="n">${fmtA(obraM+persM+nomM)}</td></tr>
   </table>
   </div>
-  <div style="text-align:center;margin-top:6px"><button class="fab" onclick="formGasto()" aria-label="New expense">${ic('plus',24)}</button></div>`;
+  <div class="homebtns">
+    <div class="it"><label class="fab" aria-label="Scan invoice">${ic('scan',24)}<input type="file" accept="image/*" hidden onchange="escanearHome(this)"></label>Scan</div>
+    <div class="it"><button class="fab big" onclick="formGasto()" aria-label="New expense">${ic('plus',28)}</button>New</div>
+    <div class="it"><label class="fab" aria-label="Scan multiple">${ic('scanmulti',24)}<input type="file" accept="image/*" multiple hidden onchange="escanearVarias(this)"></label>Scan multiple</div>
+  </div>
+  ${S.borradores.length?`<div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button></div>`:''}`;
 }
 function verGastos(f){ S.f={tipo:'',obra:'',desde:'',hasta:'',q:'',...f}; ir('gastos'); }
 
@@ -337,7 +356,7 @@ function vGastos(){
     </div>
     <label>Search</label><input type="search" placeholder="Supplier, NCF, description…" value="${esc(f.q)}" oninput="setF('q',this.value)">
   </div>
-  <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button>${S.borradores.length?`<button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button>`:''}</div>
   <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF · Internal</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel · Internal</button></div>
   <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf','acc')">PDF · Accounting</button><button class="btn sec" onclick="exportarFiltrado('xlsx','acc')">Excel · Accounting</button></div>
   <div id="glist">${listaGastos()}</div>`;
@@ -352,7 +371,7 @@ function listaGastos(){
   </div>`).join('') || '<div class="empty">No expenses match these filters.</div>';
 }
 function formGasto(id){
-  const g = S.gastos.find(x=>x.id===id) || {fecha:hoy(), tipo:S.f.tipo||'obra', obra_id:S.f.obra||'', metodo_pago:'', fotos:[]};
+  const g = gId(id) || {fecha:hoy(), tipo:S.f.tipo||'obra', obra_id:S.f.obra||'', metodo_pago:'', fotos:[]};
   const pn = S.partidas.map(p=>p.nombre); if(g.partida && !pn.includes(g.partida)) pn.push(g.partida);
   const mets = [...METHODS]; if(g.metodo_pago && !mets.includes(g.metodo_pago)) mets.push(g.metodo_pago);
   const lleva = !id || Number(g.itbis)>0;
@@ -369,31 +388,31 @@ function formGasto(id){
   <label>Description</label><input id="g_desc" value="${esc(g.descripcion)}">
   <div class="row">
     <div><label>Supplier</label><select id="g_supid" onchange="elegirSup()">
-      <option value="">${S.suplidores.length?'— Select —':'— Add suppliers in Database —'}</option>
+      <option value=""></option>
       ${S.suplidores.map(s=>`<option value="${s.id}" ${s.id===g.suplidor_id?'selected':''}>${esc(conApodo(s))}</option>`).join('')}
       <option value="otro" ${otro?'selected':''}>Other</option></select>
       <input id="g_sup" style="margin-top:6px" placeholder="Supplier name" value="${esc(g.suplidor)}" ${otro?'':'hidden'}></div>
     <div><label>RNC / ID</label><input id="g_rnc" value="${esc(g.rnc)}"></div>
   </div>
     <div><label>NCF</label><div style="display:flex;gap:6px"><select id="g_ncfp" style="width:84px;flex:none" onchange="ncfModo()">${(()=>{const m=String(g.ncf||'').toUpperCase().match(/^([A-Z]\d{2})(\d*)$/);g._p=m?m[1]:(g.ncf?'OTRO':'B01');g._n=m?m[2]:String(g.ncf||'');return ['B01','B02','E31','E32','B03','B04','B11','B12','B13','B14','B15','B16','B17','E33','E34','E41','E43','E44','E45','E46','E47','OTRO'].map(x=>`<option value="${x}" ${x===g._p?'selected':''}>${x==='OTRO'?'Other':x}</option>`).join('')})()}</select><input id="g_ncf" inputmode="${g._p==='OTRO'?'text':'numeric'}" autocapitalize="characters" placeholder="00000001" value="${esc(g._n)}"></div></div>
-    <div><label>Category</label><select id="g_part"><option value="">${S.partidas.length?'— Select —':'— Add categories in Database —'}</option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+    <div><label>Category</label><select id="g_part"><option value=""></option>${pn.map(p=>`<option ${p===g.partida?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
   ${S.emp==='diagus'?`<div><label>Division</label><select id="g_div"><option value="Constructora" ${divisionDe(g)==='Constructora'?'selected':''}>Constructora</option><option value="Distribuidora" ${divisionDe(g)==='Distribuidora'?'selected':''}>Distribuidora</option></select></div>`:''}
   <div class="row">
     <label class="chk"><input type="checkbox" id="g_lleva" ${lleva?'checked':''} onchange="calc('sin')"> ITBIS 18%</label>
-    <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> Tip 10%</label>
+    <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> TIP 10%</label>
   </div>
-  <label>Net</label><input id="g_sin" type="number" inputmode="decimal" step="0.01" value="${g.monto_sin_itbis??''}" oninput="calc('sin')">
+  <label>NET</label><input id="g_sin" type="number" inputmode="decimal" step="0.01" value="${g.monto_sin_itbis??''}" oninput="calc('sin')">
   <div class="row">
     <div><label>ITBIS</label><input id="g_itbis" type="number" inputmode="decimal" step="0.01" value="${g.itbis??''}" oninput="calc('ajuste')"></div>
-    <div><label>Tip</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
+    <div><label>TIP</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
   </div>
   <div class="row">
-    <div><label>Exempt</label><input id="g_exe" type="number" inputmode="decimal" step="0.01" value="${Number(g.exento)||''}" oninput="calc('ajuste')"></div>
+    <div><label>EXEMPT</label><input id="g_exe" type="number" inputmode="decimal" step="0.01" value="${Number(g.exento)||''}" oninput="calc('ajuste')"></div>
     <div><label>ISC 10%</label><input id="g_isc" type="number" inputmode="decimal" step="0.01" value="${Number(g.isc)||''}" oninput="calc('ajuste')"></div>
     <div><label>CDT 2%</label><input id="g_cdt" type="number" inputmode="decimal" step="0.01" value="${Number(g.cdt)||''}" oninput="calc('ajuste')"></div>
   </div>
-  <label>Gross</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
-  <label>Payment method</label><select id="g_met"><option value="">—</option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
+  <label>GROSS</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
+  <label>Payment Method</label><select id="g_met"><option value=""></option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
   ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
     ${id?`<button class="btn bad" onclick="borrarGasto('${id}')">Delete</button>`:''}
@@ -419,6 +438,63 @@ async function escanearFactura(input){
     llenarGasto(data);
     st.textContent=' Review the data and tap Save.';
   }catch(e){ st.textContent=''; toast('Scan error: '+(e.message||e)); }
+}
+function montosDe(d){
+  const n=x=>{const v=parseFloat(x); return isFinite(v)&&v>0?v:0;};
+  let sin=n(d.subtotal), it=n(d.itbis), pr=n(d.propina), tot=n(d.total);
+  if(sin){ if(!tot) tot=r2(sin+it+pr); }
+  else if(tot){ const ti=it>0?0.18:0, tp=pr>0?0.10:0; sin=r2(tot/(1+ti+tp)); it=ti?r2(sin*ti):0; pr=tp?r2(tot-sin-it):0; }
+  return {sin:r2(sin),it:r2(it),pr:r2(pr),tot:r2(tot)};
+}
+async function escanearHome(input){ formGasto(); await escanearFactura(input); }
+async function borradorDe(f){
+  const blob=await reducir(f);
+  const path=`facturas/${crypto.randomUUID()}.jpg`;
+  const up=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});
+  if(up.error) throw up.error;
+  let d={}, ok=true;
+  try{
+    const small=await reducir(f,1200,0.7);
+    const lim=new Promise((_,mal)=>setTimeout(()=>mal(new Error('Timed out')),60000));
+    const r=await Promise.race([sb.functions.invoke('scan-invoice',{body:{image:await b64(small),media_type:'image/jpeg'}}),lim]);
+    if(r.error||!r.data||r.data.error) throw new Error('scan');
+    d=r.data;
+  }catch(e){ ok=false; d={}; }
+  const m=montosDe(d), rnc=String(d.rnc||'').replace(/[^0-9]/g,''), nom=String(d.suplidor||'').trim();
+  const s=S.suplidores.find(x=>rnc&&String(x.documento||'').replace(/[^0-9]/g,'')===rnc)||S.suplidores.find(x=>nom&&x.nombre.toLowerCase()===nom.toLowerCase());
+  let ds=String(d.descripcion||'').trim(); if(ds.length>40) ds=ds.slice(0,40).replace(/\s+\S*$/,'');
+  const row={fecha:/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||'')?d.fecha:hoy(), tipo:'obra', obra_id:null, descripcion:ds,
+    suplidor:s?s.nombre:nom, suplidor_id:s?s.id:null, rnc:s?(String(s.documento||'').replace(/[^A-Za-z0-9]/g,'')||rnc):rnc,
+    ncf:String(d.ncf||'').toUpperCase().replace(/[^A-Z0-9]/g,''), partida:'', metodo_pago:'',
+    monto_sin_itbis:m.sin, itbis:m.it, propina:m.pr, monto_total:m.tot, fotos:[path], borrador:true, empresa:S.emp,
+    division:S.emp==='diagus'?'Constructora':null};
+  const {error}=await sb.from('gastos').insert(row);
+  if(error) throw error;
+  return ok;
+}
+async function escanearVarias(input){
+  const files=[...input.files]; input.value=''; if(!files.length) return;
+  let hechas=0, fallidas=0, i=0;
+  const pintar=()=>abrir(`<h2>Scanning invoices</h2><div class="s">${hechas} of ${files.length} done${fallidas?` · ${fallidas} could not be read`:''}</div><div class="bar"><i style="width:${Math.round(hechas/files.length*100)}%"></i></div><div class="s" style="margin-top:10px">Keep this screen open until it finishes.</div>`);
+  pintar();
+  const worker=async()=>{ while(i<files.length){ const f=files[i++]; try{ if(!(await borradorDe(f))) fallidas++; }catch(e){ fallidas++; } hechas++; pintar(); } };
+  await Promise.all([worker(),worker()]);
+  await cargar();
+  abrirBorradores();
+}
+async function abrirBorradores(){
+  const B=S.borradores;
+  if(!B.length){ cerrar(); return toast('No drafts pending'); }
+  const paths=B.map(b=>(b.fotos||[])[0]).filter(Boolean);
+  const {data}=paths.length?await sb.storage.from(BUCKET).createSignedUrls(paths,3600):{data:[]};
+  const urlDe={}; paths.forEach((pp,k)=>{ urlDe[pp]=data?.[k]?.signedUrl||''; });
+  abrir(`<div class="h"><h2>Drafts (${B.length})</h2><button class="btn sm sec" onclick="cerrar()">Close</button></div>
+  <div class="s" style="margin-bottom:10px">Tap an invoice to review it and save. Drafts are not counted in totals or exports until you save them.</div>
+  ${B.map(b=>{ const u=urlDe[(b.fotos||[])[0]]; const leido=b.suplidor||Number(b.monto_total);
+    return `<div class="card item" onclick="formGasto('${b.id}')">${u?`<img class="thumb" src="${u}" alt="">`:'<div class="thumb"></div>'}
+    <div style="flex:1"><div class="t">${esc(b.suplidor||'No data read')}</div>
+      <div class="s">${leido?fecha(b.fecha)+(b.ncf?' · NCF '+esc(b.ncf):''):'Open it to fill in the data'}</div></div>
+    <div class="amt">${Number(b.monto_total)?fmt(b.monto_total):''}</div></div>`; }).join('')}`);
 }
 function llenarGasto(d){
   const set=(id,v)=>{ const el=$(id); if(v!==null&&v!==undefined&&v!==''){ el.value=v; el.style.outline=''; } else if(!el.value) el.style.outline='2px solid #d9a400'; };
@@ -482,16 +558,19 @@ async function guardarGasto(id){
   { const nm=(d.suplidor||'').toLowerCase();
     const dup2=S.gastos.find(g=>g.id!==id&&g.fecha===d.fecha&&r2(g.monto_total)===r2(d.monto_total)&&((d.suplidor_id&&g.suplidor_id===d.suplidor_id)||(nm&&(g.suplidor||'').toLowerCase()===nm)));
     if(dup2 && !confirm(`This looks like a repeated invoice: same supplier, date and amount (${dup2.suplidor||''}, ${fecha(dup2.fecha)}, ${fmt(dup2.monto_total)}). Save anyway?`)) return; }
-  await limpiarFotos(S.gastos.find(x=>x.id===id)?.fotos, d.fotos);
+  const eraBorr=!!gId(id)?.borrador; d.borrador=false;
+  await limpiarFotos(gId(id)?.fotos, d.fotos);
   await guardar('gastos',id,d);
+  if(eraBorr && S.borradores.length) abrirBorradores();
 }
 async function borrarGasto(id){
-  const g=S.gastos.find(x=>x.id===id);
+  const g=gId(id); const eraBorr=!!g?.borrador;
   if(!confirm('Delete this expense?')) return;
   const {error}=await sb.from('gastos').delete().eq('id',id);
   if(error) return toast('Error: '+error.message);
   if(g?.fotos?.length) await sb.storage.from(BUCKET).remove(g.fotos);
   cerrar(); await cargar(); toast('Deleted');
+  if(eraBorr && S.borradores.length) abrirBorradores();
 }
 
 /* ---------- Payroll: attendance and payments ---------- */
@@ -605,7 +684,7 @@ function vPagos(){
   </div>`).join('') || '<div class="empty">No days worked in this period.</div>'}
   ${pend.length>1?`<button class="btn full" onclick="pagarTodos()">Record payment for all</button>`:''}
   <div class="card" style="margin-top:12px"><div class="h"><h2>Recorded payments</h2></div>
-  ${hist.length?`<table><tr><th>Date</th><th>Employee</th><th class="n">Paid</th></tr>${hist.map(p=>`<tr><td>${fecha(p.fecha_pago)}</td><td>${esc(nomEmp(p.empleado_id))}</td><td class="n">${fmt(p.neto)}</td></tr>`).join('')}</table>`:'<div class="empty">No payments yet.</div>'}</div>`;
+  ${hist.length?`<table><tr><th>Date</th><th>Employee</th><th class="n">Paid</th></tr>${hist.map(p=>`<tr><td>${fecha(p.fecha_pago)}</td><td>${esc(nomEmp(p.empleado_id))}</td><td class="n">${fmtA(p.neto)}</td></tr>`).join('')}</table>`:'<div class="empty">No payments yet.</div>'}</div>`;
 }
 async function pagarUno(f){
   const {error}=await sb.from('pagos_nomina').insert({empleado_id:f.e.id,obra_id:null,desde:S.nd,hasta:S.nh,dias_trabajados:f.dias,bruto:f.bruto,descuentos:f.ad,neto:f.neto,fecha_pago:hoy()});
@@ -1078,38 +1157,42 @@ function nombresFotos(gs){
   gs.forEach(g=>{ (g.fotos||[]).forEach((p,i)=>{ (map[g.id]=map[g.id]||[]).push(`${g.fecha}_${slug(g.suplidor||g.descripcion)}_${String(g.id).slice(0,4)}${g.fotos.length>1?'_'+(i+1):''}.jpg`); }); });
   return map;
 }
+const PAY_ES={diario:'Diario',semanal:'Semanal',quincenal:'Quincenal',mensual:'Mensual'};
+const STATUS_ES={activa:'Activo',pausada:'Pausado',terminada:'Terminado'};
+const ESTADO_ES={presente:'Presente',tardanza:'Tardanza',parcial:'Parcial',excusa:'Excusa',ausente:'Ausente'};
 function dsGastos(gs, fotosMap, modo){
   gs=gs.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
   if(modo==='acc'){
-    const h=['NCF','Date','Description','Supplier','RNC','Subtotal','ITBIS paid','Exempt','ISC 10%','CDT 2%','Legal tip','Total'];
-    if(fotosMap) h.push('Invoice photos');
-    return {t:'Accounting', h,
+    const h=['NCF','Fecha','Descripción','Suplidor','RNC','Subtotal','ITBIS pagado','Exento','ISC 10%','CDT 2%','Propina legal','Total'];
+    if(fotosMap) h.push('Fotos de facturas');
+    return {t:'Contabilidad', h,
       rows:gs.map(g=>{ const r=[g.ncf||'',fecha(g.fecha),g.descripcion||'',g.suplidor||'',g.rnc||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.exento),r2(g.isc),r2(g.cdt),r2(g.propina),r2(g.monto_total)];
         if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
       num:[5,6,7,8,9,10,11], sum:[5,6,7,8,9,10,11], gastos:gs};
   }
-  const h=['Date','Type','Project','Description','Supplier','RNC / ID','NCF','Category','Net','ITBIS','Exempt','ISC 10%','CDT 2%','Tip','Gross','Payment method'];
-  if(fotosMap) h.push('Invoice photos');
-  return {t:'Expenses', h,
-    rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Project':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.exento),r2(g.isc),r2(g.cdt),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
+  const h=['Fecha','Tipo','Proyecto','Descripción','Suplidor','RNC / Cédula','NCF','Categoría','Neto','ITBIS','Exento','ISC 10%','CDT 2%','Propina','Bruto','Método de pago'];
+  if(fotosMap) h.push('Fotos de facturas');
+  return {t:'Gastos', h,
+    rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Proyecto':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.exento),r2(g.isc),r2(g.cdt),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
       if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
     num:[8,9,10,11,12,13,14], sum:[8,9,10,11,12,13,14], pdf:[0,4,2,3,7,6,8,9,13,14], gastos:gs};
 }
 function dsGastosDiv(gs,fotosMap,modo){
   if(S.emp!=='diagus') return [dsGastos(gs,fotosMap,modo)];
-  return ['Constructora','Distribuidora'].map(dv=>{ const ds=dsGastos(gs.filter(g=>divisionDe(g)===dv),fotosMap,modo); ds.t=dv; return ds; }).filter(ds=>ds.rows.length);
+  const r=['Constructora','Distribuidora'].map(dv=>{ const ds=dsGastos(gs.filter(g=>divisionDe(g)===dv),fotosMap,modo); ds.t=dv; return ds; }).filter(ds=>ds.rows.length);
+  return r.length?r:[dsGastos(gs,fotosMap,modo)];
 }
 function dsResumen(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
   const rows=S.obras.map(o=>[o.nombre,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]).filter(r=>r[1]);
-  const sinObra=sum(gs.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total); if(sinObra) rows.push(['No project assigned',r2(sinObra)]);
+  const sinObra=sum(gs.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total); if(sinObra) rows.push(['Sin proyecto asignado',r2(sinObra)]);
   rows.push(['Personal',r2(sum(gs.filter(g=>g.tipo==='personal'),g=>g.monto_total))]);
-  rows.push(['Payroll',r2(sum(S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)),p=>p.neto))]);
-  return {t:'Balance', h:['Item','Amount'], rows, num:[1], sum:[1]};
+  rows.push(['Nómina',r2(sum(S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)),p=>p.neto))]);
+  return {t:'Balance', h:['Concepto','Monto'], rows, num:[1], sum:[1]};
 }
 function dsNomina(d1,d2){
   const ps=S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)).sort((a,b)=>String(a.fecha_pago).localeCompare(String(b.fecha_pago)));
-  return {t:'Payroll', h:['Payment date','Employee','From','To','Days','Before advances','Advances','Paid'],
+  return {t:'Nómina', h:['Fecha de pago','Empleado','Desde','Hasta','Días','Antes de adelantos','Adelantos','Pagado'],
     rows:ps.map(p=>[fecha(p.fecha_pago),nomEmp(p.empleado_id),fecha(p.desde),fecha(p.hasta),Number(p.dias_trabajados)||0,r2(p.bruto),r2(p.descuentos),r2(p.neto)]),
     num:[5,6,7], sum:[5,6,7]};
 }
@@ -1118,31 +1201,31 @@ function dsAsistencia(d1,d2){
   const emps=S.empleados.filter(e=>as.some(a=>a.empleado_id===e.id));
   const cnt=(rs,k)=>rs.filter(a=>estadoDe(a)===k).length;
   return [
-    {t:'Attendance summary', h:['Employee','Present','Late','Partial','Excused (paid)','Excused (unpaid)','Absent','Days to pay'],
+    {t:'Resumen de asistencia', h:['Empleado','Presente','Tardanza','Parcial','Excusa (pagada)','Excusa (no pagada)','Ausente','Días a pagar'],
       rows:emps.map(e=>{const rs=as.filter(a=>a.empleado_id===e.id);
         return [e.nombre,cnt(rs,'presente'),cnt(rs,'tardanza'),cnt(rs,'parcial'),rs.filter(a=>estadoDe(a)==='excusa'&&a.excusa_pagada).length,rs.filter(a=>estadoDe(a)==='excusa'&&!a.excusa_pagada).length,cnt(rs,'ausente'),sum(rs,factorDia)];})},
-    {t:'Attendance detail', h:['Date','Employee','Status','Overtime hours','Excuse paid','Reason'],
-      rows:as.map(a=>{const e=estadoDe(a);return [fecha(a.fecha),nomEmp(a.empleado_id),LBL_ESTADO[e]||e,Number(a.horas_extra)||0,e==='excusa'?(a.excusa_pagada?'Yes':'No'):'',a.motivo||''];})}
+    {t:'Detalle de asistencia', h:['Fecha','Empleado','Estado','Horas extra','Excusa pagada','Motivo'],
+      rows:as.map(a=>{const e=estadoDe(a);return [fecha(a.fecha),nomEmp(a.empleado_id),ESTADO_ES[e]||e,Number(a.horas_extra)||0,e==='excusa'?(a.excusa_pagada?'Sí':'No'):'',a.motivo||''];})}
   ];
 }
 function dsEmpleados(){
-  return {t:'Employees', h:['Name','ID / Passport','Phone','Position','Pay type','Salary','Active','Pending advances'],
-    rows:S.empleados.map(e=>[e.nombre,e.cedula||'',e.telefono||'',e.puesto||'',PAY_LBL[e.tipo_sueldo]||e.tipo_sueldo,r2(e.sueldo),e.activo?'Yes':'No',r2(pendAdel(e.id))]), num:[5,7]};
+  return {t:'Empleados', h:['Nombre','Cédula / Pasaporte','Teléfono','Puesto','Tipo de pago','Sueldo','Activo','Adelantos pendientes'],
+    rows:S.empleados.map(e=>[e.nombre,e.cedula||'',e.telefono||'',e.puesto||'',PAY_ES[e.tipo_sueldo]||e.tipo_sueldo,r2(e.sueldo),e.activo?'Sí':'No',r2(pendAdel(e.id))]), num:[5,7]};
 }
 function dsSuplidores(){
-  return {t:'Suppliers', h:['Name','Type','Profession','RNC / ID','Phone','Email','Address','Bank','Account','Notes'],
-    rows:S.suplidores.map(s=>[s.nombre,s.tipo==='empresa'?'Company':'Individual',s.tipo==='particular'?(s.profesion||''):'',s.documento||'',s.telefono||'',s.correo||'',s.direccion||'',s.banco||'',s.cuenta_banco||'',s.notas||'']),
+  return {t:'Suplidores', h:['Nombre','Tipo','Profesión','RNC / Cédula','Teléfono','Correo','Dirección','Banco','Cuenta','Notas'],
+    rows:S.suplidores.map(s=>[s.nombre,s.tipo==='empresa'?'Empresa':'Particular',s.tipo==='particular'?(s.profesion||''):'',s.documento||'',s.telefono||'',s.correo||'',s.direccion||'',s.banco||'',s.cuenta_banco||'',s.notas||'']),
     pdf:[0,1,2,3,4,5,7,8]};
 }
 function dsObras(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
-  return {t:'Projects', h:['Project','Client','Address','Status','Expenses in period'],
-    rows:S.obras.map(o=>[o.nombre,o.cliente||'',o.direccion||'',STATUS_LBL[o.estado]||o.estado,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]), num:[4], sum:[4]};
+  return {t:'Proyectos', h:['Proyecto','Cliente','Dirección','Estado','Gastos en el período'],
+    rows:S.obras.map(o=>[o.nombre,o.cliente||'',o.direccion||'',STATUS_ES[o.estado]||o.estado,r2(sum(gs.filter(g=>g.obra_id===o.id),g=>g.monto_total))]), num:[4], sum:[4]};
 }
 function dsNotas(d1,d2){
   const ns=S.notas.filter(n=>enRango(String(n.creado).slice(0,10),d1,d2)).sort((a,b)=>String(a.creado).localeCompare(String(b.creado)));
-  return {t:'TTD', h:['Date','Project','Title','Notes','Tasks'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||'',
-    tareasDe(n.id).map(t=>`[${t.hecho?'x':' '}] ${t.texto}${t.encargado?' ('+t.encargado+')':''}${t.fecha_limite?' due '+fecha(t.fecha_limite):''}`).join('; ')])};
+  return {t:'TTD', h:['Fecha','Proyecto','Título','Notas','Tareas'], rows:ns.map(n=>[fecha(n.creado),nomObra(n.obra_id)||'General',n.titulo||'',n.contenido||'',
+    tareasDe(n.id).map(t=>`[${t.hecho?'x':' '}] ${t.texto}${t.encargado?' ('+t.encargado+')':''}${t.fecha_limite?' vence '+fecha(t.fecha_limite):''}`).join('; ')])};
 }
 const EXPORTABLES=[['resumen','Balance'],['gastos','Expenses'],['nomina','Payroll payments'],['asistencia','Attendance'],['obras','Projects'],['empleados','Employees'],['suplidores','Suppliers'],['notas','TTD']];
 function pantallaExport(){
@@ -1174,7 +1257,7 @@ function rango(k){
   if(k==='anio'){ a=d.getFullYear()+'-01-01'; b=hoy(); }
   $('#x_d1').value=a; $('#x_d2').value=b;
 }
-function textoPeriodo(d1,d2){ return (d1||d2) ? `Period: ${d1?fecha(d1):'start'} - ${d2?fecha(d2):'today'}` : 'All history'; }
+function textoPeriodo(d1,d2){ return (d1||d2) ? `Período: ${d1?fecha(d1):'inicio'} - ${d2?fecha(d2):'hoy'}` : 'Todo el historial'; }
 async function exportarMenu(formato,modo){
   const d1=$('#x_d1').value, d2=$('#x_d2').value;
   const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,modo==='acc'?k==='gastos':$('#x_'+k).checked]));
@@ -1194,8 +1277,8 @@ async function exportarMenu(formato,modo){
   if(!dss.length) return toast('Select at least one item to export');
   const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_${d1||'start'}_to_${d2||hoy()}${modo==='acc'?'_Accounting':''}`;
   const fotosDe = (conFotos&&sel.gastos) ? gs : [];
-  if(formato==='pdf') await crearPDF(dss,modo==='acc'?'Accounting report':'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
-  else await crearExcel(dss,nombre,fotosDe,fotosMap);
+  if(formato==='pdf') await crearPDF(dss,modo==='acc'?'Reporte de contabilidad':'Reporte',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
+  else await crearExcel(dss,nombre,fotosDe,fotosMap,(modo==='acc'?'Reporte de contabilidad':'Reporte')+'   |   '+textoPeriodo(d1,d2));
   cerrar();
 }
 async function exportarFiltrado(formato,modo){
@@ -1204,24 +1287,25 @@ async function exportarFiltrado(formato,modo){
   let conFotos=false;
   if(gs.some(g=>g.fotos?.length)){ const r=await preguntar('Include invoice photos?'); if(r===null) return; conFotos=r; }
   const f=S.f, partes=[];
-  if(f.tipo) partes.push(f.tipo==='obra'?'Project expenses':'Personal expenses');
-  if(f.obra) partes.push('Project: '+nomObra(f.obra));
+  if(f.tipo) partes.push(f.tipo==='obra'?'Gastos de proyectos':'Gastos personales');
+  if(f.obra) partes.push('Proyecto: '+nomObra(f.obra));
   if(f.desde||f.hasta) partes.push(textoPeriodo(f.desde,f.hasta));
-  if(f.q) partes.push('Search: '+f.q);
+  if(f.q) partes.push('Búsqueda: '+f.q);
   const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_Expenses_${hoy()}${modo==='acc'?'_Accounting':''}`;
   const fotosMap=(conFotos&&formato==='xlsx')?nombresFotos(gs):null;
-  if(formato==='pdf') await crearPDF(dsGastosDiv(gs,null,modo),modo==='acc'?'Accounting report':'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
-  else await crearExcel(dsGastosDiv(gs,fotosMap,modo),nombre,conFotos?gs:[],fotosMap);
+  if(formato==='pdf') await crearPDF(dsGastosDiv(gs,null,modo),modo==='acc'?'Reporte de contabilidad':'Reporte de gastos',partes.join('   |   ')||'Todos los gastos',nombre+'.pdf',conFotos?gs:[]);
+  else await crearExcel(dsGastosDiv(gs,fotosMap,modo),nombre,conFotos?gs:[],fotosMap,(modo==='acc'?'Reporte de contabilidad':'Reporte de gastos')+'   |   '+(partes.join('   |   ')||'Todos los gastos'));
 }
-const MONEY_FMT='"RD$" #,##0.00';
-async function crearExcel(dss,nombre,gastosFotos,fotosMap){
+const MONEY_FMT='_("RD$"* #,##0.00_);_("RD$"* (#,##0.00);_("RD$"* "-"??_);_(@_)';
+async function crearExcel(dss,nombre,gastosFotos,fotosMap,sub){
   const wb=XLSX.utils.book_new();
   for(const ds of dss){
-    const aoa=[ds.h,...ds.rows];
+    const L=EMP_LEGAL[S.emp];
+    const aoa=[[`${L.n}   |   RNC ${L.rnc}`],[sub||''],[],ds.h,...ds.rows];
     if(ds.sum&&ds.rows.length) aoa.push(ds.h.map((_,i)=> i===0 ? 'Total' : ds.sum.includes(i) ? r2(sum(ds.rows,r=>r[i])) : ''));
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    (ds.num||[]).forEach(c=>{ for(let r=1;r<aoa.length;r++){ const cell=ws[XLSX.utils.encode_cell({r,c})]; if(cell&&typeof cell.v==='number') cell.z=MONEY_FMT; } });
-    ws['!cols']=ds.h.map((k,i)=>({wch:Math.min(45,Math.max(...aoa.map(r=>String(r[i]??'').length))+ ((ds.num||[]).includes(i)?6:2))}));
+    (ds.num||[]).forEach(c=>{ for(let r=4;r<aoa.length;r++){ const cell=ws[XLSX.utils.encode_cell({r,c})]; if(cell&&typeof cell.v==='number') cell.z=MONEY_FMT; } });
+    ws['!cols']=ds.h.map((k,i)=>({wch:Math.min(45,Math.max(...aoa.slice(3).map(r=>String(r[i]??'').length))+ ((ds.num||[]).includes(i)?10:2))}));
     XLSX.utils.book_append_sheet(wb,ws,ds.t.slice(0,31));
   }
   const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
@@ -1251,26 +1335,35 @@ async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
   if(!window.jspdf) return toast('Could not load the PDF tool. Check your connection.');
   const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
   const alto=doc.internal.pageSize.getHeight(), ancho=doc.internal.pageSize.getWidth();
-  doc.setFontSize(14); doc.text('CMS - '+EMPRESAS.find(e=>e[0]===S.emp)[1]+' - '+titulo,14,14);
-  doc.setFontSize(9); doc.text(sub+'   |   Generated on '+fecha(hoy()),14,20);
-  let y=28;
+  const LG=EMP_LEGAL[S.emp];
+  doc.setFontSize(14); doc.text(`${LG.n}   |   RNC ${LG.rnc}`,14,14);
+  doc.setFontSize(10); doc.text(titulo,14,20);
+  doc.setFontSize(9); doc.text(sub+'   |   Generado el '+fecha(hoy()),14,25.5);
+  let y=33;
   for(const ds of dss){
     const cols=ds.pdf||ds.h.map((_,i)=>i), nums=ds.num||[];
     if(y>alto-40){ doc.addPage(); y=16; }
     doc.setFontSize(11); doc.text(`${ds.t} (${ds.rows.length})`,14,y);
-    const cel=(v,i)=>nums.includes(i)?fmt(v):String(v??'');
-    const colStyles={}; cols.forEach((i,j)=>{ if(nums.includes(i)) colStyles[j]={halign:'right'}; });
+    const cel=(v,i)=>nums.includes(i)?fmtN(v):String(v??'');
+    const colStyles={}; cols.forEach((i,j)=>{ if(nums.includes(i)) colStyles[j]={halign:'right',cellPadding:{top:1.5,bottom:1.5,left:9,right:1.5}}; });
     doc.autoTable({
       startY:y+2,
       head:[cols.map(i=>ds.h[i])],
-      body:ds.rows.length ? ds.rows.map(r=>cols.map(i=>cel(r[i],i))) : [[{content:'No data in this period',colSpan:cols.length}]],
-      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?fmt(sum(ds.rows,r=>r[i])):'')] : [],
+      body:ds.rows.length ? ds.rows.map(r=>cols.map(i=>cel(r[i],i))) : [[{content:'Sin datos en este período',colSpan:cols.length}]],
+      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?fmtN(sum(ds.rows,r=>r[i])):'')] : [],
       showFoot:'lastPage',
       styles:{fontSize:8,cellPadding:1.5},
       headStyles:{fillColor:[51,56,61]},
       footStyles:{fillColor:[231,233,235],textColor:20,fontStyle:'bold'},
       columnStyles:colStyles,
-      margin:{left:14,right:14}
+      margin:{left:14,right:14},
+      didDrawCell:d=>{
+        if((d.section==='body'||d.section==='foot') && nums.includes(cols[d.column.index]) && d.cell.text.join('').trim()){
+          const f=d.section==='foot'; doc.setFont('helvetica',f?'bold':'normal'); doc.setFontSize(8); doc.setTextColor(f?20:0);
+          doc.text('RD$',d.cell.x+1.5,d.cell.y+d.cell.height/2+1);
+          doc.setFont('helvetica','normal'); doc.setTextColor(0);
+        }
+      }
     });
     y=doc.lastAutoTable.finalY+12;
   }
@@ -1293,7 +1386,7 @@ async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
     aviso.remove();
   }
   const n=doc.internal.getNumberOfPages();
-  for(let p=1;p<=n;p++){ doc.setPage(p); doc.setFontSize(8); doc.text(`Page ${p} of ${n}`,ancho-30,alto-8); }
+  for(let p=1;p<=n;p++){ doc.setPage(p); doc.setFontSize(8); doc.text(`Página ${p} de ${n}`,ancho-34,alto-8); }
   await descargar(doc.output('blob'),nombre);
 }
 async function descargar(blob,nombre){
