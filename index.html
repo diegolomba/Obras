@@ -1258,6 +1258,17 @@ function rango(k){
   $('#x_d1').value=a; $('#x_d2').value=b;
 }
 function textoPeriodo(d1,d2){ return (d1||d2) ? `Período: ${d1?fecha(d1):'inicio'} - ${d2?fecha(d2):'hoy'}` : 'Todo el historial'; }
+const MESES_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function nombreArchivo(d1,d2,modo,fechas){
+  const fs=(fechas||[]).filter(Boolean).sort();
+  const a=d1||fs[0]||hoy(), b=d2||fs[fs.length-1]||hoy();
+  const [ya,ma]=a.split('-').map(Number), [yb,mb]=b.split('-').map(Number);
+  let per;
+  if(ya===yb&&ma===mb) per=`${MESES_ES[ma-1]} ${ya}`;
+  else if(ya===yb) per=`${MESES_ES[ma-1]}-${MESES_ES[mb-1]} ${ya}`;
+  else per=`${MESES_ES[ma-1]} ${ya}-${MESES_ES[mb-1]} ${yb}`;
+  return `${S.emp==='nenos'?'Nenos':'Diagus Distribuidora'} - ${per} - ${modo==='acc'?'Contabilidad':'Interno'}`;
+}
 async function exportarMenu(formato,modo){
   const d1=$('#x_d1').value, d2=$('#x_d2').value;
   const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,modo==='acc'?k==='gastos':$('#x_'+k).checked]));
@@ -1275,7 +1286,7 @@ async function exportarMenu(formato,modo){
   if(sel.suplidores) dss.push(dsSuplidores());
   if(sel.notas) dss.push(dsNotas(d1,d2));
   if(!dss.length) return toast('Select at least one item to export');
-  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_${d1||'start'}_to_${d2||hoy()}${modo==='acc'?'_Accounting':''}`;
+  const nombre=nombreArchivo(d1,d2,modo,gs.map(g=>g.fecha));
   const fotosDe = (conFotos&&sel.gastos) ? gs : [];
   if(formato==='pdf') await crearPDF(dss,modo==='acc'?'Reporte de contabilidad':'Reporte',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
   else await crearExcel(dss,nombre,fotosDe,fotosMap,(modo==='acc'?'Reporte de contabilidad':'Reporte')+'   |   '+textoPeriodo(d1,d2));
@@ -1291,7 +1302,7 @@ async function exportarFiltrado(formato,modo){
   if(f.obra) partes.push('Proyecto: '+nomObra(f.obra));
   if(f.desde||f.hasta) partes.push(textoPeriodo(f.desde,f.hasta));
   if(f.q) partes.push('Búsqueda: '+f.q);
-  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_Expenses_${hoy()}${modo==='acc'?'_Accounting':''}`;
+  const nombre=nombreArchivo(f.desde,f.hasta,modo,gs.map(g=>g.fecha));
   const fotosMap=(conFotos&&formato==='xlsx')?nombresFotos(gs):null;
   if(formato==='pdf') await crearPDF(dsGastosDiv(gs,null,modo),modo==='acc'?'Reporte de contabilidad':'Reporte de gastos',partes.join('   |   ')||'Todos los gastos',nombre+'.pdf',conFotos?gs:[]);
   else await crearExcel(dsGastosDiv(gs,fotosMap,modo),nombre,conFotos?gs:[],fotosMap,(modo==='acc'?'Reporte de contabilidad':'Reporte de gastos')+'   |   '+(partes.join('   |   ')||'Todos los gastos'));
@@ -1344,22 +1355,24 @@ async function crearPDF(dss,titulo,sub,nombre,gastosFotos){
     const cols=ds.pdf||ds.h.map((_,i)=>i), nums=ds.num||[];
     if(y>alto-40){ doc.addPage(); y=16; }
     doc.setFontSize(11); doc.text(`${ds.t} (${ds.rows.length})`,14,y);
+    const FS=cols.length>9?6.5:7;
     const cel=(v,i)=>nums.includes(i)?fmtN(v):String(v??'');
     const colStyles={}; cols.forEach((i,j)=>{ if(nums.includes(i)) colStyles[j]={halign:'right',cellPadding:{top:1.5,bottom:1.5,left:9,right:1.5}}; });
     doc.autoTable({
       startY:y+2,
       head:[cols.map(i=>ds.h[i])],
       body:ds.rows.length ? ds.rows.map(r=>cols.map(i=>cel(r[i],i))) : [[{content:'Sin datos en este período',colSpan:cols.length}]],
-      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?fmtN(sum(ds.rows,r=>r[i])):'')] : [],
+      foot:(ds.sum&&ds.rows.length) ? [cols.map((i,j)=>j===0?'Total':ds.sum.includes(i)?{content:fmtN(sum(ds.rows,r=>r[i])),styles:{halign:'right',cellPadding:{top:1.5,bottom:1.5,left:9,right:1.5}}}:'')] : [],
       showFoot:'lastPage',
-      styles:{fontSize:8,cellPadding:1.5},
-      headStyles:{fillColor:[51,56,61]},
+      styles:{fontSize:FS,cellPadding:1.5,valign:'middle'},
+      headStyles:{fillColor:[51,56,61],fontSize:8,halign:'center'},
+      didParseCell:d=>{ if(d.section==='head'){ d.cell.styles.halign='center'; d.cell.styles.cellPadding=1.5; d.cell.styles.fontSize=8; } },
       footStyles:{fillColor:[231,233,235],textColor:20,fontStyle:'bold'},
       columnStyles:colStyles,
       margin:{left:14,right:14},
       didDrawCell:d=>{
         if((d.section==='body'||d.section==='foot') && nums.includes(cols[d.column.index]) && d.cell.text.join('').trim()){
-          const f=d.section==='foot'; doc.setFont('helvetica',f?'bold':'normal'); doc.setFontSize(8); doc.setTextColor(f?20:0);
+          const f=d.section==='foot'; doc.setFont('helvetica',f?'bold':'normal'); doc.setFontSize(FS); doc.setTextColor(f?20:0);
           doc.text('RD$',d.cell.x+1.5,d.cell.y+d.cell.height/2+1);
           doc.setFont('helvetica','normal'); doc.setTextColor(0);
         }
