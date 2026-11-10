@@ -338,7 +338,8 @@ function vGastos(){
     <label>Search</label><input type="search" placeholder="Supplier, NCF, description…" value="${esc(f.q)}" oninput="setF('q',this.value)">
   </div>
   <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button></div>
-  <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel</button></div>
+  <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF · Internal</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel · Internal</button></div>
+  <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf','acc')">PDF · Accounting</button><button class="btn sec" onclick="exportarFiltrado('xlsx','acc')">Excel · Accounting</button></div>
   <div id="glist">${listaGastos()}</div>`;
 }
 function listaGastos(){
@@ -386,6 +387,11 @@ function formGasto(id){
     <div><label>ITBIS</label><input id="g_itbis" type="number" inputmode="decimal" step="0.01" value="${g.itbis??''}" oninput="calc('ajuste')"></div>
     <div><label>Tip</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
   </div>
+  <div class="row">
+    <div><label>Exempt</label><input id="g_exe" type="number" inputmode="decimal" step="0.01" value="${Number(g.exento)||''}" oninput="calc('ajuste')"></div>
+    <div><label>ISC 10%</label><input id="g_isc" type="number" inputmode="decimal" step="0.01" value="${Number(g.isc)||''}" oninput="calc('ajuste')"></div>
+    <div><label>CDT 2%</label><input id="g_cdt" type="number" inputmode="decimal" step="0.01" value="${Number(g.cdt)||''}" oninput="calc('ajuste')"></div>
+  </div>
   <label>Gross</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
   <label>Payment method</label><select id="g_met"><option value="">—</option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
   ${bloqueFotos()}
@@ -404,7 +410,7 @@ async function escanearFactura(input){
     const blob=await reducir(f);
     const path=`${S.fotosDir}${crypto.randomUUID()}.jpg`;
     const up=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});
-    if(!up.error){ S.fotosTmp.push(path); pintarFotos(); }
+    if(!up.error){ S.fotosTmp.push(path); pintarFotos(); } else toast('Photo not saved: '+up.error.message,6000);
     const small=await reducir(f,1200,0.7);
     const lim=new Promise((_,mal)=>setTimeout(()=>mal(new Error('Timed out, try again')),60000));
     const {data,error}=await Promise.race([sb.functions.invoke('scan-invoice',{body:{image:await b64(small),media_type:'image/jpeg'}}),lim]);
@@ -448,17 +454,18 @@ function elegirSup(){
 function calc(src){
   const ti=$('#g_lleva').checked?0.18:0, tp=$('#g_llevap').checked?0.10:0;
   const v=id=>parseFloat($(id).value)||0;
-  const sin=v('#g_sin'), it=v('#g_itbis'), pr=v('#g_prop'), tot=v('#g_tot');
+  const sin=v('#g_sin'), it=v('#g_itbis'), pr=v('#g_prop'), tot=v('#g_tot'), ex=v('#g_exe')+v('#g_isc')+v('#g_cdt');
   if(src==='tot'){
     if(!tot){ ['#g_sin','#g_itbis','#g_prop'].forEach(i=>$(i).value=''); return; }
-    const s=r2(tot/(1+ti+tp)), i=r2(s*ti), p=r2(tot-s-i);
+    const base=Math.max(0,tot-ex);
+    const s=r2(base/(1+ti+tp)), i=r2(s*ti), p=r2(base-s-i);
     $('#g_sin').value=s; $('#g_itbis').value=ti?i:''; $('#g_prop').value=tp?p:'';
   } else if(src==='ajuste'){
-    $('#g_tot').value=(sin||it||pr)?r2(sin+it+pr):'';
+    $('#g_tot').value=(sin||it||pr||ex)?r2(sin+it+pr+ex):'';
   } else {
-    if(!sin){ ['#g_itbis','#g_prop','#g_tot'].forEach(i=>$(i).value=''); return; }
+    if(!sin){ ['#g_itbis','#g_prop'].forEach(i=>$(i).value=''); $('#g_tot').value=ex?r2(ex):''; return; }
     const i=r2(sin*ti), p=r2(sin*tp);
-    $('#g_itbis').value=ti?i:''; $('#g_prop').value=tp?p:''; $('#g_tot').value=r2(sin+i+p);
+    $('#g_itbis').value=ti?i:''; $('#g_prop').value=tp?p:''; $('#g_tot').value=r2(sin+i+p+ex);
   }
 }
 async function guardarGasto(id){
@@ -467,11 +474,14 @@ async function guardarGasto(id){
     descripcion:$('#g_desc').value.trim(), suplidor:$('#g_sup').value.trim(), division:S.emp==='diagus'?$('#g_div').value:null,
     suplidor_id:(supid&&supid!=='otro')?supid:null, rnc:alnum($('#g_rnc').value),
     ncf:(()=>{if($('#g_ncfp').value==='OTRO')return $('#g_ncf').value.trim().toUpperCase();const n=$('#g_ncf').value.replace(/[^0-9]/g,'');return n?$('#g_ncfp').value+n:''})(), partida:$('#g_part').value,
-    monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value,
+    monto_sin_itbis:num('#g_sin'), itbis:num('#g_itbis'), propina:num('#g_prop'), exento:num('#g_exe'), isc:num('#g_isc'), cdt:num('#g_cdt'), monto_total:num('#g_tot'), metodo_pago:$('#g_met').value,
     fotos:S.fotosTmp};
   if(!d.monto_total) return toast('Enter the net or gross amount');
   if(d.ncf){ const dup=S.gastos.find(g=>g.id!==id&&g.ncf===d.ncf&&(g.rnc||'')===d.rnc);
-    if(dup && !confirm(`An expense with this NCF already exists (${fecha(dup.fecha)}, ${dup.suplidor||''}). Save anyway?`)) return; }
+    if(dup && !confirm(`An expense with this NCF and RNC already exists (${fecha(dup.fecha)}, ${dup.suplidor||''}, ${fmt(dup.monto_total)}). Save anyway?`)) return; }
+  { const nm=(d.suplidor||'').toLowerCase();
+    const dup2=S.gastos.find(g=>g.id!==id&&g.fecha===d.fecha&&r2(g.monto_total)===r2(d.monto_total)&&((d.suplidor_id&&g.suplidor_id===d.suplidor_id)||(nm&&(g.suplidor||'').toLowerCase()===nm)));
+    if(dup2 && !confirm(`This looks like a repeated invoice: same supplier, date and amount (${dup2.suplidor||''}, ${fecha(dup2.fecha)}, ${fmt(dup2.monto_total)}). Save anyway?`)) return; }
   await limpiarFotos(S.gastos.find(x=>x.id===id)?.fotos, d.fotos);
   await guardar('gastos',id,d);
 }
@@ -1068,18 +1078,26 @@ function nombresFotos(gs){
   gs.forEach(g=>{ (g.fotos||[]).forEach((p,i)=>{ (map[g.id]=map[g.id]||[]).push(`${g.fecha}_${slug(g.suplidor||g.descripcion)}_${String(g.id).slice(0,4)}${g.fotos.length>1?'_'+(i+1):''}.jpg`); }); });
   return map;
 }
-function dsGastos(gs, fotosMap){
+function dsGastos(gs, fotosMap, modo){
   gs=gs.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  const h=['Date','Type','Project','Description','Supplier','RNC / ID','NCF','Category','Net','ITBIS','Tip','Gross','Payment method'];
+  if(modo==='acc'){
+    const h=['NCF','Date','Description','Supplier','RNC','Subtotal','ITBIS paid','Exempt','ISC 10%','CDT 2%','Legal tip','Total'];
+    if(fotosMap) h.push('Invoice photos');
+    return {t:'Accounting', h,
+      rows:gs.map(g=>{ const r=[g.ncf||'',fecha(g.fecha),g.descripcion||'',g.suplidor||'',g.rnc||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.exento),r2(g.isc),r2(g.cdt),r2(g.propina),r2(g.monto_total)];
+        if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
+      num:[5,6,7,8,9,10,11], sum:[5,6,7,8,9,10,11], gastos:gs};
+  }
+  const h=['Date','Type','Project','Description','Supplier','RNC / ID','NCF','Category','Net','ITBIS','Exempt','ISC 10%','CDT 2%','Tip','Gross','Payment method'];
   if(fotosMap) h.push('Invoice photos');
   return {t:'Expenses', h,
-    rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Project':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
+    rows:gs.map(g=>{ const r=[fecha(g.fecha),g.tipo==='obra'?'Project':'Personal',g.tipo==='obra'?nomObra(g.obra_id):'Personal',g.descripcion||'',g.suplidor||'',g.rnc||'',g.ncf||'',g.partida||'',r2(g.monto_sin_itbis),r2(g.itbis),r2(g.exento),r2(g.isc),r2(g.cdt),r2(g.propina),r2(g.monto_total),g.metodo_pago||''];
       if(fotosMap) r.push((fotosMap[g.id]||[]).join(', ')); return r; }),
-    num:[8,9,10,11], sum:[8,9,10,11], pdf:[0,4,2,3,7,6,8,9,10,11], gastos:gs};
+    num:[8,9,10,11,12,13,14], sum:[8,9,10,11,12,13,14], pdf:[0,4,2,3,7,6,8,9,13,14], gastos:gs};
 }
-function dsGastosDiv(gs,fotosMap){
-  if(S.emp!=='diagus') return [dsGastos(gs,fotosMap)];
-  return ['Constructora','Distribuidora'].map(dv=>{ const ds=dsGastos(gs.filter(g=>divisionDe(g)===dv),fotosMap); ds.t=dv; return ds; }).filter(ds=>ds.rows.length);
+function dsGastosDiv(gs,fotosMap,modo){
+  if(S.emp!=='diagus') return [dsGastos(gs,fotosMap,modo)];
+  return ['Constructora','Distribuidora'].map(dv=>{ const ds=dsGastos(gs.filter(g=>divisionDe(g)===dv),fotosMap,modo); ds.t=dv; return ds; }).filter(ds=>ds.rows.length);
 }
 function dsResumen(d1,d2){
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
@@ -1139,9 +1157,14 @@ function pantallaExport(){
   ${EXPORTABLES.map(([k,l])=>`<label class="chk"><input type="checkbox" id="x_${k}" ${['resumen','gastos'].includes(k)?'checked':''}> ${l}</label>`).join('')}
   <div class="s" style="margin-top:10px">Employees and suppliers are exported in full; everything else follows the dates. If you include invoice photos, the PDF adds one page per invoice and Excel comes in a ZIP with the photos.</div>
   <div class="row" style="margin-top:16px">
-    <button class="btn" onclick="exportarMenu('pdf')">PDF</button>
-    <button class="btn" onclick="exportarMenu('xlsx')">Excel</button>
+    <button class="btn" onclick="exportarMenu('pdf')">PDF · Internal</button>
+    <button class="btn" onclick="exportarMenu('xlsx')">Excel · Internal</button>
   </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn sec" onclick="exportarMenu('pdf','acc')">PDF · Accounting</button>
+    <button class="btn sec" onclick="exportarMenu('xlsx','acc')">Excel · Accounting</button>
+  </div>
+  <div class="s" style="margin-top:6px">Accounting exports only the expense table (NCF, date, description, supplier, RNC, subtotal, ITBIS, exempt, ISC, CDT, tip, total).</div>
   <button class="btn sec full lg" style="margin-top:10px" onclick="cerrar()">Cancel</button>`);
 }
 function rango(k){
@@ -1152,16 +1175,16 @@ function rango(k){
   $('#x_d1').value=a; $('#x_d2').value=b;
 }
 function textoPeriodo(d1,d2){ return (d1||d2) ? `Period: ${d1?fecha(d1):'start'} - ${d2?fecha(d2):'today'}` : 'All history'; }
-async function exportarMenu(formato){
+async function exportarMenu(formato,modo){
   const d1=$('#x_d1').value, d2=$('#x_d2').value;
-  const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,$('#x_'+k).checked]));
+  const sel=Object.fromEntries(EXPORTABLES.map(([k])=>[k,modo==='acc'?k==='gastos':$('#x_'+k).checked]));
   let conFotos=false;
   if(sel.gastos && S.gastos.some(g=>enRango(g.fecha,d1,d2)&&g.fotos?.length)){ const r=await preguntar('Include invoice photos?'); if(r===null) return; conFotos=r; }
   const gs=S.gastos.filter(g=>enRango(g.fecha,d1,d2));
   const fotosMap=(conFotos&&sel.gastos&&formato==='xlsx')?nombresFotos(gs):null;
   const dss=[];
   if(sel.resumen) dss.push(dsResumen(d1,d2));
-  if(sel.gastos) dss.push(...dsGastosDiv(gs,fotosMap));
+  if(sel.gastos) dss.push(...dsGastosDiv(gs,fotosMap,modo));
   if(sel.nomina) dss.push(dsNomina(d1,d2));
   if(sel.asistencia) dss.push(...dsAsistencia(d1,d2));
   if(sel.obras) dss.push(dsObras(d1,d2));
@@ -1169,13 +1192,13 @@ async function exportarMenu(formato){
   if(sel.suplidores) dss.push(dsSuplidores());
   if(sel.notas) dss.push(dsNotas(d1,d2));
   if(!dss.length) return toast('Select at least one item to export');
-  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_${d1||'start'}_to_${d2||hoy()}`;
+  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_${d1||'start'}_to_${d2||hoy()}${modo==='acc'?'_Accounting':''}`;
   const fotosDe = (conFotos&&sel.gastos) ? gs : [];
-  if(formato==='pdf') await crearPDF(dss,'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
+  if(formato==='pdf') await crearPDF(dss,modo==='acc'?'Accounting report':'Report',textoPeriodo(d1,d2),nombre+'.pdf',fotosDe);
   else await crearExcel(dss,nombre,fotosDe,fotosMap);
   cerrar();
 }
-async function exportarFiltrado(formato){
+async function exportarFiltrado(formato,modo){
   const gs=gastosFiltrados();
   if(!gs.length) return toast('No expenses to export');
   let conFotos=false;
@@ -1185,10 +1208,10 @@ async function exportarFiltrado(formato){
   if(f.obra) partes.push('Project: '+nomObra(f.obra));
   if(f.desde||f.hasta) partes.push(textoPeriodo(f.desde,f.hasta));
   if(f.q) partes.push('Search: '+f.q);
-  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_Expenses_${hoy()}`;
+  const nombre=`${S.emp==='nenos'?'Nenos':'Diagus'}_Expenses_${hoy()}${modo==='acc'?'_Accounting':''}`;
   const fotosMap=(conFotos&&formato==='xlsx')?nombresFotos(gs):null;
-  if(formato==='pdf') await crearPDF(dsGastosDiv(gs),'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
-  else await crearExcel(dsGastosDiv(gs,fotosMap),nombre,conFotos?gs:[],fotosMap);
+  if(formato==='pdf') await crearPDF(dsGastosDiv(gs,null,modo),modo==='acc'?'Accounting report':'Expense report',partes.join('   |   ')||'All expenses',nombre+'.pdf',conFotos?gs:[]);
+  else await crearExcel(dsGastosDiv(gs,fotosMap,modo),nombre,conFotos?gs:[],fotosMap);
 }
 const MONEY_FMT='"RD$" #,##0.00';
 async function crearExcel(dss,nombre,gastosFotos,fotosMap){
