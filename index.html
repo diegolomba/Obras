@@ -69,6 +69,7 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 .menu button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--bd);background:#fff;padding:15px 14px;font-size:16px;color:var(--tx);text-align:left}
 .menu button:last-child{border-bottom:0}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#23272b;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;max-width:90%;text-align:center}
+.card .item+.item{border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}
 .empty{text-align:center;color:var(--mut);padding:24px}
 .chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--tx);margin-top:12px}.chk input{width:22px;height:22px;flex:0 0 auto;accent-color:var(--pri)}
 .h{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px;gap:8px}.h h2{font-size:16px;margin:0}
@@ -160,6 +161,7 @@ const ICONS = {
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 14v6h14v-6"/>',
+  budget:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   logout:'<path d="M9 4H5v16h4"/><path d="M16 8l4 4-4 4M20 12H10"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
   check:'<path d="M5 12l4 4 10-10"/>',
@@ -200,7 +202,7 @@ const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
 const obraOpts = (sel, blank='') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
 const S = {
-  obras:[], gastos:[], borradores:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[],
+  obras:[], gastos:[], borradores:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[], presupuestos:[], adicionales:[], cobros:[], bobra:null,
   tab:'inicio', sub:'asistencia', db:'suplidores', listo:false,
   f:{tipo:'',obra:'',desde:'',hasta:'',q:''},
   fn:'todas', qs:'', calMes:hoy().slice(0,7), nd:sumaDias(hoy(),-6), nh:hoy(),
@@ -236,7 +238,7 @@ async function cambiarEmp(v){ S.emp=v; try{localStorage.setItem('cms_emp',v)}cat
 const gId=id=>S.gastos.find(x=>x.id===id)||S.borradores.find(x=>x.id===id);
 const divisionDe=g=>g.division||((g.tipo==='obra'||g.obra_id)?'Constructora':'Distribuidora');
 async function cargar(){
-  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas'};
+  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas',presupuestos:'presupuestos',adicionales:'adicionales',cobros:'cobros'};
   const keys = Object.keys(tablas);
   const res = await Promise.all(keys.map(k => sb.from(tablas[k]).select('*').range(0,9999)));
   for(let i=0;i<keys.length;i++){
@@ -248,6 +250,10 @@ async function cargar(){
   const ide=new Set(S.empleados.map(e=>e.id)), idn=new Set(S.notas.map(n=>n.id));
   for(const k of ['asistencia','adelantos','pagos']) S[k]=S[k].filter(x=>ide.has(x.empleado_id));
   S.tareas=S.tareas.filter(x=>idn.has(x.nota_id));
+  const ido=new Set(S.obras.map(o=>o.id));
+  for(const k of ['presupuestos','adicionales','cobros']) S[k]=S[k].filter(x=>ido.has(x.obra_id));
+  S.adicionales.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+  S.cobros.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
   pintarEmp();
   S.obras.sort((a,b)=>(a.estado==='activa'?0:1)-(b.estado==='activa'?0:1) || a.nombre.localeCompare(b.nombre));
   S.gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha) || String(b.creado).localeCompare(String(a.creado)));
@@ -273,18 +279,18 @@ async function borrar(t,id){
 }
 
 /* ---------- Navigation ---------- */
-const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['notas','note','TTD'],['galeria','image','Gallery'],['nomina','users','Payroll'],['database','db','Database']];
-function ir(t){ S.tab=t; render(); window.scrollTo(0,0); }
+const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['notas','note','TTD'],['galeria','image','Gallery'],['nomina','users','Payroll'],['budgets','budget','Budgets']];
+function ir(t,keep){ if(t==='budgets'&&!keep) S.bobra=null; S.tab=t; render(); window.scrollTo(0,0); }
 function render(){
   $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')">${ic(i)}${l}</button>`).join('');
-  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,galeria:vGaleria,database:vDatabase})[S.tab]();
+  $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,galeria:vGaleria,database:vDatabase,budgets:vBudgets})[S.tab]();
   if(S.tab==='galeria') cargarGaleria();
 }
 function seg(opciones, actual, accion){
   return `<div class="seg">${opciones.map(([k,l])=>`<button class="${actual===k?'on':''}" onclick="${accion}('${k}')">${l}</button>`).join('')}</div>`;
 }
 function menu(){
-  $('#dropPanel').innerHTML=`<button onclick="cerrarMenu();pantallaExport()">${ic('export')} Export</button><button onclick="cerrarMenu();salir()">${ic('logout')} Log out</button>`;
+  $('#dropPanel').innerHTML=`<button onclick="cerrarMenu();pantallaExport()">${ic('export')} Export</button><button onclick="cerrarMenu();ir('database')">${ic('db')} Database</button><button onclick="cerrarMenu();salir()">${ic('logout')} Log out</button>`;
   $('#drop').classList.add('on');
 }
 function cerrarMenu(){ $('#drop').classList.remove('on'); }
@@ -305,18 +311,11 @@ function vInicio(){
   const gm = S.gastos.filter(g=>g.fecha?.startsWith(m));
   const obraM = sum(gm.filter(g=>g.tipo==='obra'),g=>g.monto_total);
   const persM = sum(gm.filter(g=>g.tipo==='personal'),g=>g.monto_total);
-  const itbisM = sum(gm,g=>g.itbis);
   const nomM = sum(S.pagos.filter(p=>p.fecha_pago?.startsWith(m)),p=>p.neto);
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
   return `
-  <div class="s" style="margin:0 0 6px">Summary</div>
-  <div class="stats">
-    <div class="stat"><span>Project expenses</span><b>${fmt(obraM)}</b></div>
-    <div class="stat"><span>Personal expenses</span><b>${fmt(persM)}</b></div>
-    <div class="stat"><span>Payroll paid</span><b>${fmt(nomM)}</b></div>
-    <div class="stat"><span>ITBIS paid</span><b>${fmt(itbisM)}</b></div>
-  </div>
+  ${homeBudgets()}
   <div class="card"><div class="h"><h2>Monthly balance</h2></div>
   <table>
     ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmtA(f.g)}</td></tr>`).join('')}
@@ -1134,6 +1133,7 @@ async function renombrarPartida(id){
   const {error}=await sb.from('partidas').update({nombre:nuevo}).eq('id',id);
   if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
   await sb.from('gastos').update({partida:nuevo}).eq('partida',p.nombre).eq('empresa',S.emp);
+  await sb.from('presupuestos').update({partida:nuevo}).eq('partida',p.nombre).in('obra_id',S.obras.map(o=>o.id));
   await cargar(); toast('Category renamed');
 }
 async function borrarPartida(id){
@@ -1147,6 +1147,140 @@ async function partidasSugeridas(){
   const {error}=await sb.from('partidas').insert(CATEGORIES_START.map(nombre=>({nombre,empresa:S.emp})));
   if(error) return toast('Error: '+error.message);
   await cargar(); toast('Categories added');
+}
+
+/* ---------- Budgets ---------- */
+const presObra=id=>S.presupuestos.filter(p=>p.obra_id===id);
+const adicObra=id=>S.adicionales.filter(a=>a.obra_id===id);
+const cobrObra=id=>S.cobros.filter(c=>c.obra_id===id);
+function resObra(o){
+  const base=sum(presObra(o.id),p=>p.monto), adic=sum(adicObra(o.id),a=>a.monto);
+  const total=r2(base+adic), gast=gastoObra(o.id), cob=sum(cobrObra(o.id),c=>c.monto);
+  return {base,adic,total,gast,cob,pct:total>0?gast/total*100:(gast>0?101:0)};
+}
+const colorPct=p=>p>100?'#c0392b':p>=80?'#e0a100':'var(--pri)';
+const barra=(p,color,h)=>`<div class="bar" style="${h?'height:'+h+'px;':''}margin-top:6px"><i style="width:${Math.min(100,Math.max(0,p))}%;background:${color||colorPct(p)}"></i></div>`;
+const pctTxt=r=>r.total>0?Math.round(r.pct)+'%':'—';
+const ordenObras=(fin)=>S.obras.filter(o=>fin||o.estado!=='terminada').sort((a,b)=>({activa:0,pausada:1,terminada:2}[a.estado]??1)-({activa:0,pausada:1,terminada:2}[b.estado]??1)||a.nombre.localeCompare(b.nombre));
+function filaBudget(o){
+  const r=resObra(o);
+  return `<div class="card" onclick="S.bobra='${o.id}';ir('budgets',1)" style="cursor:pointer">
+    <div class="item" style="padding:0"><div><div class="t">${esc(o.nombre)}</div>${o.estado!=='activa'?`<div class="s"><span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span></div>`:''}</div>
+      <div class="amt" style="color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${r.total>0?pctTxt(r):'No budget'}</div></div>
+    ${barra(r.pct)}
+    <div class="s" style="margin-top:5px">${r.total>0?`${fmt(r.gast)} of ${fmt(r.total)}`:`${fmt(r.gast)} spent`}</div>
+  </div>`;
+}
+function homeBudgets(){
+  const os=ordenObras(false);
+  return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(os.map(filaBudget).join('')||'<div class="card empty">No projects yet.</div>');
+}
+function vBudgets(){
+  const o=S.obras.find(x=>x.id===S.bobra);
+  if(!o) { S.bobra=null; return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(ordenObras(true).map(filaBudget).join('')||'<div class="empty">Create a project in Database first.</div>'); }
+  const r=resObra(o), pres=Object.fromEntries(presObra(o.id).map(p=>[p.partida,Number(p.monto)||0]));
+  const gs=S.gastos.filter(g=>g.obra_id===o.id);
+  const gp={}; let sinCat=0;
+  for(const g of gs){ if(g.partida) gp[g.partida]=(gp[g.partida]||0)+Number(g.monto_total||0); else sinCat+=Number(g.monto_total||0); }
+  const names=[...new Set([...Object.keys(pres),...Object.keys(gp)])].sort((a,b)=>a.localeCompare(b));
+  const filaCat=(n,g,b)=>{ const p=b>0?g/b*100:(g>0?101:0);
+    return `<div style="margin-bottom:12px"><div class="item" style="padding:0"><div class="t" style="font-size:14px">${esc(n)}</div><div class="s">${b>0?fmt(g)+' / '+fmt(b):fmt(g)+(g>0?' · no budget':'')}</div></div>${barra(p,null,6)}${b>0?`<div class="s" style="margin-top:3px">${b-g>=0?'Available '+fmt(b-g):'Over by '+fmt(g-b)}</div>`:''}</div>`; };
+  const cobPct=r.total>0?r.cob/r.total*100:0;
+  return `<div class="h"><button class="btn sm sec" onclick="S.bobra=null;render()">← Budgets</button><button class="btn sm" onclick="formPresupuesto('${o.id}')">${r.base>0?'Edit budget':'Set budget'}</button></div>
+  <div class="card">
+    <div class="item" style="padding:0"><div><div class="t" style="font-size:17px">${esc(o.nombre)}</div><div class="s"><span class="tag ${o.estado==='activa'?'d':'p'}">${STATUS_LBL[o.estado]||o.estado}</span></div></div>
+      <div class="amt" style="font-size:20px;color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${pctTxt(r)}</div></div>
+    ${barra(r.pct,null,12)}
+    <table style="margin-top:10px">
+      <tr><td>Original budget</td><td class="n">${fmtA(r.base)}</td></tr>
+      <tr><td>Adicionales</td><td class="n">${fmtA(r.adic)}</td></tr>
+      <tr class="tot"><td>Total budget</td><td class="n">${fmtA(r.total)}</td></tr>
+      <tr><td>Spent</td><td class="n">${fmtA(r.gast)}</td></tr>
+      <tr><td>${r.total-r.gast>=0?'Available':'Over budget'}</td><td class="n">${fmtA(Math.abs(r.total-r.gast))}</td></tr>
+    </table>
+  </div>
+  <div class="card"><div class="h"><h2>By category</h2></div>
+    ${names.map(n=>filaCat(n,gp[n]||0,pres[n]||0)).join('')}
+    ${sinCat>0?filaCat('Sin categoría',sinCat,0):''}
+    ${!names.length&&!sinCat?'<div class="empty">No budget or expenses yet.</div>':''}
+  </div>
+  <div class="card"><div class="h"><h2>Adicionales</h2><button class="btn sm" onclick="formAdic('${o.id}')">+ Add</button></div>
+    ${adicObra(o.id).map(a=>`<div class="item" onclick="formAdic('${o.id}','${a.id}')"><div><div class="t">${esc(a.descripcion||'Adicional')}</div><div class="s">${fecha(a.fecha)}</div></div><div class="amt">${fmt(a.monto)}</div></div>`).join('')||'<div class="empty">No adicionales.</div>'}
+  </div>
+  <div class="card"><div class="h"><h2>Cobros</h2><button class="btn sm" onclick="formCobro('${o.id}')">+ Add payment</button></div>
+    <table>
+      <tr><td>Total budget</td><td class="n">${fmtA(r.total)}</td></tr>
+      <tr><td>Collected</td><td class="n">${fmtA(r.cob)}</td></tr>
+      <tr class="tot"><td>${r.total-r.cob>=0?'Pending to collect':'Collected over budget'}</td><td class="n">${fmtA(Math.abs(r.total-r.cob))}</td></tr>
+    </table>
+    ${barra(cobPct,'#2e8b57',8)}
+    <div style="margin-top:10px">
+    ${cobrObra(o.id).map(c=>`<div class="item" onclick="formCobro('${o.id}','${c.id}')"><div><div class="t">${fecha(c.fecha)}${c.metodo?' · '+esc(c.metodo):''}</div><div class="s">${esc(c.nota||'')}${c.fotos?.length?' · 📷 '+c.fotos.length:''}</div></div><div class="amt">${fmt(c.monto)}</div></div>`).join('')||'<div class="empty">No payments received yet.</div>'}
+    </div>
+  </div>`;
+}
+function pbTot(){ $('#pb_tot').textContent=fmt(S.pbNames.reduce((t,_,i)=>t+(parseFloat($('#pb_'+i).value)||0),0)); }
+function formPresupuesto(oid){
+  const o=S.obras.find(x=>x.id===oid), cur=Object.fromEntries(presObra(oid).map(p=>[p.partida,p.monto]));
+  S.pbNames=[...new Set([...S.partidas.map(p=>p.nombre),...Object.keys(cur),...S.gastos.filter(g=>g.obra_id===oid&&g.partida).map(g=>g.partida)])].sort((a,b)=>a.localeCompare(b));
+  abrir(`<h2>Budget · ${esc(o.nombre)}</h2>
+  <div class="card" style="margin:8px 0"><div class="item" style="padding:0"><div class="t">Original budget</div><div class="amt" id="pb_tot">${fmt(sum(presObra(oid),p=>p.monto))}</div></div></div>
+  ${S.pbNames.map((n,i)=>`<label>${esc(n)}</label><input id="pb_${i}" type="number" inputmode="decimal" step="0.01" value="${cur[n]||''}" oninput="pbTot()">`).join('')||'<div class="empty">Add categories in Database first.</div>'}
+  <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancel</button><button class="btn" onclick="guardarPresupuesto('${oid}')">Save</button></div>`);
+}
+async function guardarPresupuesto(oid){
+  const filas=[], vacias=[];
+  S.pbNames.forEach((n,i)=>{ const v=r2(parseFloat($('#pb_'+i).value)||0); (v>0?filas:vacias).push(v>0?{obra_id:oid,partida:n,monto:v}:n); });
+  if(filas.length){ const {error}=await sb.from('presupuestos').upsert(filas,{onConflict:'obra_id,partida'}); if(error) return toast('Error: '+error.message); }
+  if(vacias.length){ const {error}=await sb.from('presupuestos').delete().eq('obra_id',oid).in('partida',vacias); if(error) return toast('Error: '+error.message); }
+  cerrar(); await cargar(); toast('Saved');
+}
+function formAdic(oid,id){
+  const a=S.adicionales.find(x=>x.id===id)||{fecha:hoy()};
+  abrir(`<h2>${id?'Edit':'New'} adicional</h2>
+  <label>Date</label><input type="date" id="a_fecha" value="${a.fecha}">
+  <label>Description</label><input id="a_desc" value="${esc(a.descripcion)}">
+  <label>Amount</label><input id="a_monto" type="number" inputmode="decimal" step="0.01" value="${a.monto??''}">
+  <div class="row" style="margin-top:16px">
+    ${id?`<button class="btn bad" onclick="borrar('adicionales','${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardarAdic('${oid}','${id||''}')">Save</button>
+  </div>`);
+}
+function guardarAdic(oid,id){
+  const monto=num('#a_monto'); if(!monto) return toast('Enter the amount');
+  guardar('adicionales',id,{obra_id:oid,fecha:$('#a_fecha').value||hoy(),descripcion:$('#a_desc').value.trim(),monto});
+}
+function formCobro(oid,id){
+  const c=S.cobros.find(x=>x.id===id)||{fecha:hoy(),fotos:[]};
+  const mets=[...METHODS]; if(c.metodo&&!mets.includes(c.metodo)) mets.push(c.metodo);
+  S.fotosTmp=[...(c.fotos||[])]; S.fotosDir='cobros/';
+  abrir(`<h2>${id?'Edit':'New'} payment received</h2>
+  <label>Date</label><input type="date" id="c_fecha" value="${c.fecha}">
+  <label>Amount</label><input id="c_monto" type="number" inputmode="decimal" step="0.01" value="${c.monto??''}">
+  <label>Payment Method</label><select id="c_met"><option value=""></option>${mets.map(m=>`<option ${c.metodo===m?'selected':''}>${m}</option>`).join('')}</select>
+  <label>Note</label><input id="c_nota" value="${esc(c.nota)}">
+  ${bloqueFotos()}
+  <div class="row" style="margin-top:16px">
+    ${id?`<button class="btn bad" onclick="borrarCobro('${id}')">Delete</button>`:''}
+    <button class="btn sec" onclick="cerrar()">Cancel</button>
+    <button class="btn" onclick="guardarCobro('${oid}','${id||''}')">Save</button>
+  </div>`);
+  pintarFotos();
+}
+async function guardarCobro(oid,id){
+  const monto=num('#c_monto'); if(!monto) return toast('Enter the amount');
+  const d={obra_id:oid,fecha:$('#c_fecha').value||hoy(),monto,metodo:$('#c_met').value,nota:$('#c_nota').value.trim(),fotos:S.fotosTmp};
+  await limpiarFotos(S.cobros.find(x=>x.id===id)?.fotos,d.fotos);
+  await guardar('cobros',id,d);
+}
+async function borrarCobro(id){
+  const c=S.cobros.find(x=>x.id===id);
+  if(!confirm('Delete this payment?')) return;
+  const {error}=await sb.from('cobros').delete().eq('id',id);
+  if(error) return toast('Error: '+error.message);
+  if(c?.fotos?.length) await sb.storage.from(BUCKET).remove(c.fotos);
+  cerrar(); await cargar(); toast('Deleted');
 }
 
 /* ---------- Export ---------- */
