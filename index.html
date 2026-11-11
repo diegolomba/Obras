@@ -875,9 +875,6 @@ async function borrarNota(id){
 function fotosTodas(){
   const L=[], dia=v=>String(v||'').slice(0,10);
   S.gastos.forEach(g=>(g.fotos||[]).forEach(p=>L.push({p,f:dia(g.fecha)})));
-  S.tareas.forEach(t=>(t.fotos||[]).forEach(p=>L.push({p,f:dia(t.creado)})));
-  S.suplidores.forEach(s=>(s.fotos||[]).forEach(p=>L.push({p,f:dia(s.creado)})));
-  S.empleados.forEach(e=>(e.fotos||[]).forEach(p=>L.push({p,f:dia(e.creado)})));
   return L.sort((a,b)=>b.f.localeCompare(a.f));
 }
 function vGaleria(){
