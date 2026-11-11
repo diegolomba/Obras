@@ -85,7 +85,7 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 .cal .wd{text-align:center;font-size:11px;color:var(--mut);padding:2px 0}
 .cal .d{background:#fff;border:1px solid var(--bd);border-radius:8px;min-height:54px;padding:4px 5px;font-size:13px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}
 .cal .d .c{font-size:11px;font-weight:600;text-align:right}
-.cal .d.full{background:#d9dde0;border-color:#c9ced2}.cal .d.part{background:#eef0f1}
+.cal .d.full{background:#d3f1e1;border-color:#b2dfc7}.cal .d.part{background:#fff4c9;border-color:#f0e0a0}.cal .d.red{background:#fcd6d6;border-color:#efb0b0}
 .cal .d.hoy{outline:2px solid var(--pri);outline-offset:-1px}
 .cal .d.vac{background:none;border:0;cursor:default}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -329,11 +329,11 @@ function vInicio(){
     const a0=-Math.PI/2+i*2*Math.PI/n, a1=-Math.PI/2+(i+1)*2*Math.PI/n, am=(a0+a1)/2, g=0.012;
     const [x1,y1]=pt(R1,a0+g),[x2,y2]=pt(R1,a1-g),[x3,y3]=pt(R0,a1-g),[x4,y4]=pt(R0,a0+g), big=(a1-a0)>Math.PI?1:0;
     const [tx,ty]=pt(RM,am), nom=l.n.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-    const ls=partir(nom), amt=Math.round(l.v).toLocaleString('en-US'), y0=ty-((ls.length+1)*fs*1.15)/2+fs*0.9;
-    const tx_=[...ls.map(t=>`<tspan x="${tx}" dy="${fs*1.15}">${esc(t)}</tspan>`),`<tspan x="${tx}" dy="${fs*1.15}" font-weight="700">${amt}</tspan>`].join('');
+    const ls=partir(nom), amt='RD$ '+fmtN(l.v), y0=ty-((ls.length+1)*fs*1.15)/2+fs*0.9;
+    const tx_=[...ls.map(t=>`<tspan x="${tx}" dy="${fs*1.15}">${esc(t)}</tspan>`),`<tspan x="${tx}" dy="${fs*1.15}" font-weight="700" font-size="${Math.min(fs,(25/(amt.length*0.56))).toFixed(2)}">${amt}</tspan>`].join('');
     return `<g onclick="${l.click}" style="cursor:pointer"><path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/><text x="${tx}" y="${y0-fs*1.15}" text-anchor="middle" font-size="${fs}" fill="#1f2328" style="pointer-events:none">${tx_}</text></g>`;
   }).join('');
-  const tt=fmtN(totM), tfs=tt.length>12?3.6:tt.length>10?4.2:4.8;
+  const tt='RD$ '+fmtN(totM), tfs=Math.min(4.8,40/(tt.length*0.58));
   const dona=`<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>`;
   return `
   <div class="card"><div class="h"><h2>Monthly balance</h2></div>
@@ -614,7 +614,8 @@ function vAsistencia(){
   for(let d=1;d<=nd;d++){
     const f=`${S.calMes}-${String(d).padStart(2,'0')}`;
     const regs=S.asistencia.filter(a=>a.fecha===f), n=regs.filter(fue).length;
-    const cls=regs.length?((act&&n>=act)?'full':'part'):'';
+    const est=regs.map(estadoDe), np=est.filter(x=>x==='presente').length;
+    const cls=!regs.length?'':est.includes('ausente')?'red':(act&&np>=act&&np===regs.length)?'full':'part';
     cel+=`<div class="d ${cls} ${f===hoy()?'hoy':''}" onclick="abrirDia('${f}')"><span>${d}</span><span class="c">${regs.length?n+'/'+act:''}</span></div>`;
   }
   const regsM=S.asistencia.filter(a=>a.fecha.startsWith(S.calMes));
@@ -1176,14 +1177,21 @@ function resObra(o){
   const total=r2(base+adic), gast=gastoObra(o.id), cob=sum(cobrObra(o.id),c=>c.monto);
   return {base,adic,total,gast,cob,pct:total>0?gast/total*100:(gast>0?101:0)};
 }
-const colorPct=p=>p>100?'#d9534f':p>=80?'#e09a1a':'#2f9e8a';
-const gradPct=p=>p>100?'linear-gradient(90deg,#ffb3ab,#e5534b)':p>=80?'linear-gradient(90deg,#ffe08a,#f5a623)':'linear-gradient(90deg,#9be0c4,#3fb6a0)';
+const colorPct=p=>p>100?'#c96b6b':p>=80?'#b88a1e':'#4a9d86';
+const gradPct=p=>p>100?'linear-gradient(90deg,#ffd6d6,#f2a0a0)':p>=80?'linear-gradient(90deg,#fff3c4,#f7d774)':'linear-gradient(90deg,#c9f0e0,#8fd4bb)';
 const barra=(p,color,h)=>`<div class="bar" style="height:${h||12}px;border-radius:${h||12}px;background:#eceef0;margin-top:8px"><i style="width:${Math.min(100,Math.max(0,p))}%;min-width:${p>0?(h||12):0}px;border-radius:${h||12}px;background:${color||gradPct(p)};transition:width .4s"></i></div>`;
 const pctTxt=r=>r.total>0?Math.round(r.pct)+'%':'—';
 const ordenObras=(fin)=>S.obras.filter(o=>fin||o.estado!=='terminada').sort((a,b)=>({activa:0,pausada:1,terminada:2}[a.estado]??1)-({activa:0,pausada:1,terminada:2}[b.estado]??1)||a.nombre.localeCompare(b.nombre));
-function filaBudget(o){
-  const r=resObra(o);
-  return `<div class="card" onclick="S.bobra='${o.id}';ir('budgets',1)" style="cursor:pointer">
+function filaBudget(o,compact){
+  const r=resObra(o), click=`S.bobra='${o.id}';ir('budgets',1)`;
+  if(compact) return `<div class="card" onclick="${click}" style="cursor:pointer;padding:8px 10px;margin-bottom:6px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="t" style="font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.nombre)}${o.estado!=='activa'?` <span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span>`:''}</div>
+      <div class="s" style="white-space:nowrap;font-size:11px">${r.total>0?`${fmt(r.gast)} of ${fmt(r.total)}`:`${fmt(r.gast)} spent`}</div></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1">${barra(r.pct,null,8)}</div>
+      <div style="width:38px;text-align:right;margin-top:6px;font-size:12px;font-weight:700;color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${r.total>0?pctTxt(r):'—'}</div></div>
+  </div>`;
+  return `<div class="card" onclick="${click}" style="cursor:pointer">
     <div class="item" style="padding:0"><div><div class="t">${esc(o.nombre)}</div>${o.estado!=='activa'?`<div class="s"><span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span></div>`:''}</div>
       <div class="amt" style="color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${r.total>0?pctTxt(r):'No budget'}</div></div>
     ${barra(r.pct)}
@@ -1192,11 +1200,11 @@ function filaBudget(o){
 }
 function homeBudgets(){
   const os=ordenObras(false);
-  return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(os.map(filaBudget).join('')||'<div class="card empty">No projects yet.</div>');
+  return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(os.map(o=>filaBudget(o,true)).join('')||'<div class="card empty">No projects yet.</div>');
 }
 function vBudgets(){
   const o=S.obras.find(x=>x.id===S.bobra);
-  if(!o) { S.bobra=null; return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(ordenObras(true).map(filaBudget).join('')||'<div class="empty">Create a project in Database first.</div>'); }
+  if(!o) { S.bobra=null; return `<div class="s" style="margin:0 0 6px">Budgets</div>`+(ordenObras(true).map(o=>filaBudget(o)).join('')||'<div class="empty">Create a project in Database first.</div>'); }
   const r=resObra(o), pres=Object.fromEntries(presObra(o.id).map(p=>[p.partida,Number(p.monto)||0]));
   const gs=S.gastos.filter(g=>g.obra_id===o.id);
   const gp={}; let sinCat=0;
@@ -1232,7 +1240,7 @@ function vBudgets(){
       <tr><td>Collected</td><td class="n">${fmtA(r.cob)}</td></tr>
       <tr class="tot"><td>${r.total-r.cob>=0?'Pending to collect':'Collected over budget'}</td><td class="n">${fmtA(Math.abs(r.total-r.cob))}</td></tr>
     </table>
-    ${barra(cobPct,'linear-gradient(90deg,#b7e4a8,#4caf6a)',10)}
+    ${barra(cobPct,'linear-gradient(90deg,#d9f2cf,#a8dc9a)',10)}
     <div style="margin-top:10px">
     ${cobrObra(o.id).map(c=>`<div class="item" onclick="formCobro('${o.id}','${c.id}')"><div><div class="t">${fecha(c.fecha)}${c.metodo?' · '+esc(c.metodo):''}</div><div class="s">${esc(c.nota||'')}${c.fotos?.length?' · 📷 '+c.fotos.length:''}</div></div><div class="amt">${fmt(c.monto)}</div></div>`).join('')||'<div class="empty">No payments received yet.</div>'}
     </div>
