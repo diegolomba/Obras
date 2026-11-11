@@ -20,7 +20,7 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 svg.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
-header{position:sticky;top:0;background:var(--hdr);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+header{position:sticky;top:0;background:var(--hdr);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;justify-content:space-between;align-items:center;z-index:25}
 header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:2px}
 header button{background:none;color:#fff;border:0;padding:6px;display:flex;align-items:center}
 header .izq{display:flex;align-items:center;gap:8px}
@@ -130,7 +130,7 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 <div id="app" hidden>
   <header>
     <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>CMS</h1><select class="emp" id="b_emp" onchange="cambiarEmp(this.value)"></select></div>
-    <button onclick="recargar()" aria-label="Refresh" id="b_ref"></button>
+    <div class="izq"><button onclick="atras()" aria-label="Back" id="b_back"></button><button onclick="recargar()" aria-label="Refresh" id="b_ref"></button></div>
   </header>
   <main id="view"><div class="empty">Loading…</div></main>
   <nav id="nav"></nav>
@@ -162,6 +162,7 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 14v6h14v-6"/>',
   budget:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
   logout:'<path d="M9 4H5v16h4"/><path d="M16 8l4 4-4 4M20 12H10"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
   check:'<path d="M5 12l4 4 10-10"/>',
@@ -170,6 +171,7 @@ const ICONS = {
 const ic = (n,size) => `<svg class="ic" viewBox="0 0 24 24" ${size?`style="width:${size}px;height:${size}px"`:''}>${ICONS[n]}</svg>`;
 document.getElementById('b_menu').innerHTML = ic('menu');
 document.getElementById('b_ref').innerHTML = ic('refresh');
+document.getElementById('b_back').innerHTML = ic('back');
 
 const CATEGORIES_START = ['Materials','Labor','Subcontracts','Equipment rental','Tools','Transportation','Fuel','Electrical','Plumbing','Painting','Finishes','Permits','Admin expenses'];
 const METHODS = ['Cash','Transfer','Card','Check','Credit'];
@@ -193,7 +195,14 @@ const hoy = () => ymd(new Date());
 const sumaDias = (f,n) => { const d=new Date(f+'T12:00:00'); d.setDate(d.getDate()+n); return ymd(d); };
 const fecha = f => { if(!f) return ''; const s=String(f).slice(0,10).split('-'); return `${s[2]}/${s[1]}/${s[0]}`; };
 const sum = (a,f) => a.reduce((s,x)=>s+(Number(f(x))||0),0);
-const num = sel => r2(parseFloat($(sel).value)||0);
+const pf = v => parseFloat(String(v).replace(/,/g,''))||0;
+const num = sel => r2(pf($(sel).value));
+const MNY=['#g_sin','#g_itbis','#g_prop','#g_exe','#g_isc','#g_cdt','#g_tot'];
+const fv = v => (v===undefined||v===null||v===''||!isFinite(Number(v)))?'':fmtN(v);
+function fmtMontos(){ MNY.forEach(i=>{ const el=$(i); if(el&&el!==document.activeElement&&el.value.trim()!=='') el.value=fmtN(pf(el.value)); }); }
+function unfm(el){ el.value=el.value.replace(/,/g,''); if(pf(el.value)===0&&/^0*\.?0*$/.test(el.value)) el.value=''; }
+function fm(el){ if(el.value.trim()!=='') el.value=fmtN(pf(el.value)); }
+document.addEventListener('input',e=>{ if(e.target.classList?.contains('mny')) e.target.value=e.target.value.replace(/[^0-9.,]/g,''); },true);
 const alnum = v => String(v||'').replace(/[^0-9A-Za-z]/g,'').toUpperCase();
 const nomObra = id => S.obras.find(o=>o.id===id)?.nombre || '';
 function ncfModo(){ $('#g_ncf').setAttribute('inputmode',$('#g_ncfp').value==='OTRO'?'text':'numeric'); $('#g_ncf').blur(); }
@@ -280,7 +289,15 @@ async function borrar(t,id){
 
 /* ---------- Navigation ---------- */
 const TABS=[['inicio','home','Home'],['gastos','receipt','Expenses'],['notas','note','TTD'],['galeria','image','Gallery'],['nomina','users','Payroll'],['budgets','budget','Budgets']];
-function ir(t,keep){ if(t==='budgets'&&!keep) S.bobra=null; S.tab=t; render(); window.scrollTo(0,0); }
+S.hist=[];
+function atras(){
+  if(!$('#sheet').hidden){ cerrar(); return; }
+  if(!$('#dlg').hidden){ $('#dlg').hidden=true; return; }
+  if(S.tab==='budgets'&&S.bobra){ S.bobra=null; render(); window.scrollTo(0,0); return; }
+  const p=S.hist.pop(); if(!p) return toast('Nothing to go back to');
+  S.tab=p; render(); window.scrollTo(0,0);
+}
+function ir(t,keep){ if(t!==S.tab){ S.hist.push(S.tab); if(S.hist.length>20) S.hist.shift(); } if(t==='budgets'&&!keep) S.bobra=null; S.tab=t; render(); window.scrollTo(0,0); }
 function render(){
   $('#nav').innerHTML = TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" onclick="ir('${k}')">${ic(i)}${l}</button>`).join('');
   $('#view').innerHTML = ({inicio:vInicio,gastos:vGastos,nomina:vNomina,notas:vNotas,galeria:vGaleria,database:vDatabase,budgets:vBudgets})[S.tab]();
@@ -306,7 +323,7 @@ function preguntar(msg, si='Yes', no='No'){
 }
 
 /* ---------- Home ---------- */
-function vInicio(){
+function lineasMes(){
   const m = hoy().slice(0,7);
   const gm = S.gastos.filter(g=>g.fecha?.startsWith(m));
   const obraM = sum(gm.filter(g=>g.tipo==='obra'),g=>g.monto_total);
@@ -314,24 +331,31 @@ function vInicio(){
   const nomM = sum(S.pagos.filter(p=>p.fecha_pago?.startsWith(m)),p=>p.neto);
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
-  const lineas=[...filas.map(f=>({n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01'})`})),
+  const lineas=[...filas.map(f=>({id:f.o.id,n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01'})`})),
     {n:'Personal',v:persM,click:`verGastos({tipo:'personal',desde:'${m}-01'})`},
     {n:'Payroll',v:nomM,click:`S.sub='pagos';ir('nomina')`}].sort((a,b)=>a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
   if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01'})`});
   const PAL=['#8EC5FC','#A8E6CF','#FFD3A5','#C3B1E1','#9EE6E0','#FFB3B3','#F9E79F','#B5C7ED','#F7C6E0','#C5E1A5'];
   lineas.forEach((l,i)=>l.c=l.n.startsWith('<i>')?'#D5D9DD':PAL[i%PAL.length]);
+  return {m,obraM,persM,nomM,lineas};
+}
+const colorObra=id=>lineasMes().lineas.find(l=>l.id===id)?.c||'#D5D9DD';
+function vInicio(){
+  const {m,obraM,persM,nomM,lineas}=lineasMes();
   const totM=obraM+persM+nomM, n=lineas.length;
-  const fs=n<=4?4.2:n<=6?3.7:n<=8?3.3:2.9, R1=49, R0=22, RM=(R1+R0)/2+1, maxC=Math.floor(24/(fs*0.56));
+  const fsMax=n<=4?4.2:n<=6?3.7:n<=8?3.3:2.9, R1=49, R0=22, RM=(R1+R0)/2+1, W=24;
   const pt=(r,a)=>[(50+r*Math.cos(a)).toFixed(2),(50+r*Math.sin(a)).toFixed(2)];
-  const cortar=t=>t.length>maxC?t.slice(0,maxC-1)+'…':t;
-  const partir=t=>{ if(t.length<=maxC) return [t]; const w=t.split(' '); let l1=''; while(w.length&&(l1+' '+w[0]).trim().length<=maxC) l1=(l1+' '+w.shift()).trim(); return l1?[l1,cortar(w.join(' '))].filter(Boolean):[cortar(t)]; };
+  const partir=(t,mc)=>{ if(t.length<=mc) return [t]; const w=t.split(' '); let l1=''; while(w.length&&(l1+' '+w[0]).trim().length<=mc) l1=(l1+' '+w.shift()).trim(); return l1?[l1,w.join(' ')]:[t]; };
+  const ajustar=t=>{ for(let f=fsMax;f>=2;f-=0.2){ const mc=Math.floor(W/(f*0.56)), ls=partir(t,mc); if(ls.length<=2&&ls.every(x=>x.length<=mc)) return {f,ls}; }
+    const mc=Math.floor(W/(2*0.56)); return {f:2,ls:partir(t,mc).map(x=>x.length>mc?x.slice(0,mc-1)+'…':x).slice(0,2)}; };
   const segs=lineas.map((l,i)=>{
     const a0=-Math.PI/2+i*2*Math.PI/n, a1=-Math.PI/2+(i+1)*2*Math.PI/n, am=(a0+a1)/2, g=0.012;
     const [x1,y1]=pt(R1,a0+g),[x2,y2]=pt(R1,a1-g),[x3,y3]=pt(R0,a1-g),[x4,y4]=pt(R0,a0+g), big=(a1-a0)>Math.PI?1:0;
     const [tx,ty]=pt(RM,am), nom=l.n.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-    const ls=partir(nom), amt='RD$ '+fmtN(l.v), y0=ty-((ls.length+1)*fs*1.15)/2+fs*0.9;
-    const tx_=[...ls.map(t=>`<tspan x="${tx}" dy="${fs*1.15}">${esc(t)}</tspan>`),`<tspan x="${tx}" dy="${fs*1.15}" font-weight="700" font-size="${Math.min(fs,(25/(amt.length*0.56))).toFixed(2)}">${amt}</tspan>`].join('');
-    return `<g onclick="${l.click}" style="cursor:pointer"><path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/><text x="${tx}" y="${y0-fs*1.15}" text-anchor="middle" font-size="${fs}" fill="#1f2328" style="pointer-events:none">${tx_}</text></g>`;
+    const {f,ls}=ajustar(nom), amt='RD$ '+fmtN(l.v), fa=Math.min(fsMax,W/(amt.length*0.56));
+    const rows=[...ls.map(t=>({t,f,b:0})),{t:amt,f:fa,b:1}], tot=rows.reduce((q,r)=>q+r.f*1.2,0);
+    let yy=ty-tot/2; const tsp=rows.map(r=>{ yy+=r.f*1.2; return `<tspan x="${tx}" y="${(yy-r.f*0.25).toFixed(2)}" font-size="${r.f.toFixed(2)}"${r.b?' font-weight="700"':''}>${esc(r.t)}</tspan>`; }).join('');
+    return `<g onclick="${l.click}" style="cursor:pointer"><path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/><text text-anchor="middle" fill="#1f2328" style="pointer-events:none">${tsp}</text></g>`;
   }).join('');
   const tt='RD$ '+fmtN(totM), tfs=Math.min(4.8,40/(tt.length*0.58));
   const dona=`<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>`;
@@ -415,17 +439,17 @@ function formGasto(id){
     <label class="chk"><input type="checkbox" id="g_lleva" ${lleva?'checked':''} onchange="calc('sin')"> ITBIS 18%</label>
     <label class="chk"><input type="checkbox" id="g_llevap" ${Number(g.propina)>0?'checked':''} onchange="calc('sin')"> TIP 10%</label>
   </div>
-  <label>NET</label><input id="g_sin" type="number" inputmode="decimal" step="0.01" value="${g.monto_sin_itbis??''}" oninput="calc('sin')">
+  <label>NET</label><input id="g_sin" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(g.monto_sin_itbis)}" oninput="calc('sin')">
   <div class="row">
-    <div><label>ITBIS</label><input id="g_itbis" type="number" inputmode="decimal" step="0.01" value="${g.itbis??''}" oninput="calc('ajuste')"></div>
-    <div><label>TIP</label><input id="g_prop" type="number" inputmode="decimal" step="0.01" value="${Number(g.propina)||''}" oninput="calc('ajuste')"></div>
+    <div><label>ITBIS</label><input id="g_itbis" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(g.itbis)}" oninput="calc('ajuste')"></div>
+    <div><label>TIP</label><input id="g_prop" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(Number(g.propina)||'')}" oninput="calc('ajuste')"></div>
   </div>
   <div class="row">
-    <div><label>EXEMPT</label><input id="g_exe" type="number" inputmode="decimal" step="0.01" value="${Number(g.exento)||''}" oninput="calc('ajuste')"></div>
-    <div><label>ISC 10%</label><input id="g_isc" type="number" inputmode="decimal" step="0.01" value="${Number(g.isc)||''}" oninput="calc('ajuste')"></div>
-    <div><label>CDT 2%</label><input id="g_cdt" type="number" inputmode="decimal" step="0.01" value="${Number(g.cdt)||''}" oninput="calc('ajuste')"></div>
+    <div><label>EXEMPT</label><input id="g_exe" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(Number(g.exento)||'')}" oninput="calc('ajuste')"></div>
+    <div><label>ISC 10%</label><input id="g_isc" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(Number(g.isc)||'')}" oninput="calc('ajuste')"></div>
+    <div><label>CDT 2%</label><input id="g_cdt" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(Number(g.cdt)||'')}" oninput="calc('ajuste')"></div>
   </div>
-  <label>GROSS</label><input id="g_tot" type="number" inputmode="decimal" step="0.01" value="${g.monto_total??''}" oninput="calc('tot')">
+  <label>GROSS</label><input id="g_tot" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(g.monto_total)}" oninput="calc('tot')">
   <label>Payment Method</label><select id="g_met"><option value=""></option>${mets.map(m=>`<option ${g.metodo_pago===m?'selected':''}>${m}</option>`).join('')}</select>
   ${bloqueFotos()}
   <div class="row" style="margin-top:16px">
@@ -532,6 +556,7 @@ function llenarGasto(d){
   if(sin){ $('#g_sin').value=r2(sin); $('#g_itbis').value=it?r2(it):''; $('#g_prop').value=pr?r2(pr):''; $('#g_tot').value=tot?r2(tot):r2(sin+it+pr); }
   else if(tot){ if(!it&&!pr){ $('#g_lleva').checked=false; } $('#g_tot').value=r2(tot); calc('tot'); }
   if(!$('#g_tot').value) $('#g_tot').style.outline='2px solid #d9a400'; else $('#g_tot').style.outline='';
+  fmtMontos();
 }
 function elegirSup(){
   const v=$('#g_supid').value;
@@ -541,9 +566,10 @@ function elegirSup(){
   $('#g_sup').value = s ? s.nombre : '';
   $('#g_rnc').value = s ? (s.documento||'') : '';
 }
-function calc(src){
+function calc(src){ calc0(src); fmtMontos(); }
+function calc0(src){
   const ti=$('#g_lleva').checked?0.18:0, tp=$('#g_llevap').checked?0.10:0;
-  const v=id=>parseFloat($(id).value)||0;
+  const v=id=>pf($(id).value);
   const sin=v('#g_sin'), it=v('#g_itbis'), pr=v('#g_prop'), tot=v('#g_tot'), ex=v('#g_exe')+v('#g_isc')+v('#g_cdt');
   if(src==='tot'){
     if(!tot){ ['#g_sin','#g_itbis','#g_prop'].forEach(i=>$(i).value=''); return; }
@@ -1184,15 +1210,16 @@ const pctTxt=r=>r.total>0?Math.round(r.pct)+'%':'—';
 const ordenObras=(fin)=>S.obras.filter(o=>fin||o.estado!=='terminada').sort((a,b)=>({activa:0,pausada:1,terminada:2}[a.estado]??1)-({activa:0,pausada:1,terminada:2}[b.estado]??1)||a.nombre.localeCompare(b.nombre));
 function filaBudget(o,compact){
   const r=resObra(o), click=`S.bobra='${o.id}';ir('budgets',1)`;
-  if(compact) return `<div class="card" onclick="${click}" style="cursor:pointer;padding:8px 10px;margin-bottom:6px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="t" style="font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.nombre)}${o.estado!=='activa'?` <span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span>`:''}</div>
+  const col=colorObra(o.id), dot=`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${col};margin-right:6px"></span>`;
+  if(compact) return `<div class="card" onclick="${click}" style="cursor:pointer;padding:8px 10px;margin-bottom:6px;border-left:5px solid ${col}">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="t" style="font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dot}${esc(o.nombre)}${o.estado!=='activa'?` <span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span>`:''}</div>
       <div class="s" style="white-space:nowrap;font-size:11px">${r.total>0?`${fmt(r.gast)} of ${fmt(r.total)}`:`${fmt(r.gast)} spent`}</div></div>
     <div style="display:flex;align-items:center;gap:8px">
       <div style="flex:1">${barra(r.pct,null,8)}</div>
       <div style="width:38px;text-align:right;margin-top:6px;font-size:12px;font-weight:700;color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${r.total>0?pctTxt(r):'—'}</div></div>
   </div>`;
-  return `<div class="card" onclick="${click}" style="cursor:pointer">
-    <div class="item" style="padding:0"><div><div class="t">${esc(o.nombre)}</div>${o.estado!=='activa'?`<div class="s"><span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span></div>`:''}</div>
+  return `<div class="card" onclick="${click}" style="cursor:pointer;border-left:5px solid ${col}">
+    <div class="item" style="padding:0"><div><div class="t">${dot}${esc(o.nombre)}</div>${o.estado!=='activa'?`<div class="s"><span class="tag p">${STATUS_LBL[o.estado]||o.estado}</span></div>`:''}</div>
       <div class="amt" style="color:${r.total>0?colorPct(r.pct):'var(--mut)'}">${r.total>0?pctTxt(r):'No budget'}</div></div>
     ${barra(r.pct)}
     <div class="s" style="margin-top:5px">${r.total>0?`${fmt(r.gast)} of ${fmt(r.total)}`:`${fmt(r.gast)} spent`}</div>
