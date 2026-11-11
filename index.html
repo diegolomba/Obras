@@ -320,17 +320,24 @@ function vInicio(){
   if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01'})`});
   const PAL=['#8EC5FC','#A8E6CF','#FFD3A5','#C3B1E1','#9EE6E0','#FFB3B3','#F9E79F','#B5C7ED','#F7C6E0','#C5E1A5'];
   lineas.forEach((l,i)=>l.c=l.n.startsWith('<i>')?'#D5D9DD':PAL[i%PAL.length]);
-  const totM=obraM+persM+nomM;
-  let acc=0;
-  const segs=totM>0?lineas.filter(l=>l.v>0).map(l=>{const p=l.v/totM*100,x=`<circle cx="21" cy="21" r="15.915" fill="none" stroke="${l.c}" stroke-width="6" stroke-dasharray="${Math.max(p-0.6,0.1)} ${100-Math.max(p-0.6,0.1)}" stroke-dashoffset="${25-acc}"/>`; acc+=p; return x;}).join(''):'';
-  const dona=`<div style="display:flex;justify-content:center;margin:2px 0 12px"><svg viewBox="0 0 42 42" width="210" height="210"><circle cx="21" cy="21" r="15.915" fill="none" stroke="#eceef0" stroke-width="6"/>${segs}<text x="21" y="19.5" text-anchor="middle" font-size="2.6" fill="#8a9097">RD$</text><text x="21" y="24.5" text-anchor="middle" font-size="${fmtN(totM).length>11?3.4:4}" font-weight="700" fill="#1f2328">${fmtN(totM)}</text></svg></div>`;
+  const totM=obraM+persM+nomM, n=lineas.length;
+  const fs=n<=4?4.2:n<=6?3.7:n<=8?3.3:2.9, R1=49, R0=22, RM=(R1+R0)/2+1, maxC=Math.floor(24/(fs*0.56));
+  const pt=(r,a)=>[(50+r*Math.cos(a)).toFixed(2),(50+r*Math.sin(a)).toFixed(2)];
+  const cortar=t=>t.length>maxC?t.slice(0,maxC-1)+'…':t;
+  const partir=t=>{ if(t.length<=maxC) return [t]; const w=t.split(' '); let l1=''; while(w.length&&(l1+' '+w[0]).trim().length<=maxC) l1=(l1+' '+w.shift()).trim(); return l1?[l1,cortar(w.join(' '))].filter(Boolean):[cortar(t)]; };
+  const segs=lineas.map((l,i)=>{
+    const a0=-Math.PI/2+i*2*Math.PI/n, a1=-Math.PI/2+(i+1)*2*Math.PI/n, am=(a0+a1)/2, g=0.012;
+    const [x1,y1]=pt(R1,a0+g),[x2,y2]=pt(R1,a1-g),[x3,y3]=pt(R0,a1-g),[x4,y4]=pt(R0,a0+g), big=(a1-a0)>Math.PI?1:0;
+    const [tx,ty]=pt(RM,am), nom=l.n.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+    const ls=partir(nom), amt=Math.round(l.v).toLocaleString('en-US'), y0=ty-((ls.length+1)*fs*1.15)/2+fs*0.9;
+    const tx_=[...ls.map(t=>`<tspan x="${tx}" dy="${fs*1.15}">${esc(t)}</tspan>`),`<tspan x="${tx}" dy="${fs*1.15}" font-weight="700">${amt}</tspan>`].join('');
+    return `<g onclick="${l.click}" style="cursor:pointer"><path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/><text x="${tx}" y="${y0-fs*1.15}" text-anchor="middle" font-size="${fs}" fill="#1f2328" style="pointer-events:none">${tx_}</text></g>`;
+  }).join('');
+  const tt=fmtN(totM), tfs=tt.length>12?3.6:tt.length>10?4.2:4.8;
+  const dona=`<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>`;
   return `
   <div class="card"><div class="h"><h2>Monthly balance</h2></div>
   ${dona}
-  <table>
-    ${lineas.map(l=>`<tr onclick="${l.click}"><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${l.c};margin-right:8px"></span>${l.n}</td><td class="n">${fmtA(l.v)}</td></tr>`).join('')}
-    <tr class="tot"><td>Total</td><td class="n">${fmtA(obraM+persM+nomM)}</td></tr>
-  </table>
   </div>
   <div class="homebtns">
     <div class="it"><label class="fab" aria-label="Scan invoice">${ic('scan',24)}<input type="file" accept="image/*" hidden onchange="escanearHome(this)"></label>Scan</div>
