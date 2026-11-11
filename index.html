@@ -314,14 +314,14 @@ function vInicio(){
   const nomM = sum(S.pagos.filter(p=>p.fecha_pago?.startsWith(m)),p=>p.neto);
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
+  const lineas=[...filas.map(f=>({n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01'})`})),
+    {n:'Personal',v:persM,click:`verGastos({tipo:'personal',desde:'${m}-01'})`},
+    {n:'Payroll',v:nomM,click:`S.sub='pagos';ir('nomina')`}].sort((a,b)=>a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
+  if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01'})`});
   return `
-  ${homeBudgets()}
   <div class="card"><div class="h"><h2>Monthly balance</h2></div>
   <table>
-    ${filas.map(f=>`<tr onclick="verGastos({obra:'${f.o.id}',desde:'${m}-01'})"><td>${esc(f.o.nombre)}</td><td class="n">${fmtA(f.g)}</td></tr>`).join('')}
-    ${sinObra?`<tr><td><i>No project assigned</i></td><td class="n">${fmtA(sinObra)}</td></tr>`:''}
-    <tr onclick="verGastos({tipo:'personal',desde:'${m}-01'})"><td>Personal</td><td class="n">${fmtA(persM)}</td></tr>
-    <tr onclick="S.sub='pagos';ir('nomina')"><td>Payroll</td><td class="n">${fmtA(nomM)}</td></tr>
+    ${lineas.map(l=>`<tr onclick="${l.click}"><td>${l.n}</td><td class="n">${fmtA(l.v)}</td></tr>`).join('')}
     <tr class="tot"><td>Total</td><td class="n">${fmtA(obraM+persM+nomM)}</td></tr>
   </table>
   </div>
@@ -330,7 +330,8 @@ function vInicio(){
     <div class="it"><button class="fab big" onclick="formGasto()" aria-label="New expense">${ic('plus',28)}</button>New</div>
     <div class="it"><label class="fab" aria-label="Scan multiple">${ic('scanmulti',24)}<input type="file" accept="image/*" multiple hidden onchange="escanearVarias(this)"></label>Scan multiple</div>
   </div>
-  ${S.borradores.length?`<div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button></div>`:''}`;
+  ${S.borradores.length?`<div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button></div>`:''}
+  <div style="margin-top:18px">${homeBudgets()}</div>`;
 }
 function verGastos(f){ S.f={tipo:'',obra:'',desde:'',hasta:'',q:'',...f}; ir('gastos'); }
 
@@ -557,6 +558,12 @@ async function guardarGasto(id){
   { const nm=(d.suplidor||'').toLowerCase();
     const dup2=S.gastos.find(g=>g.id!==id&&g.fecha===d.fecha&&r2(g.monto_total)===r2(d.monto_total)&&((d.suplidor_id&&g.suplidor_id===d.suplidor_id)||(nm&&(g.suplidor||'').toLowerCase()===nm)));
     if(dup2 && !confirm(`This looks like a repeated invoice: same supplier, date and amount (${dup2.suplidor||''}, ${fecha(dup2.fecha)}, ${fmt(dup2.monto_total)}). Save anyway?`)) return; }
+  if(!d.suplidor_id && d.rnc && d.suplidor && !S.suplidores.some(x=>alnum(x.documento)===d.rnc)){
+    if(confirm(`The supplier "${d.suplidor}" (RNC ${d.rnc}) is not in your list. Add it?`)){
+      const {data:ns,error:e2}=await sb.from('suplidores').insert({nombre:d.suplidor,tipo:d.rnc.length===9?'empresa':'particular',documento:d.rnc,empresa:S.emp,fotos:[]}).select().single();
+      if(e2) toast('Could not add the supplier: '+e2.message); else d.suplidor_id=ns.id;
+    }
+  }
   const eraBorr=!!gId(id)?.borrador; d.borrador=false;
   await limpiarFotos(gId(id)?.fotos, d.fotos);
   await guardar('gastos',id,d);
