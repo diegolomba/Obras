@@ -27,7 +27,7 @@ header .izq{display:flex;align-items:center;gap:8px}
 header select.emp{width:auto;max-width:170px;margin:0 0 0 4px;padding:5px 24px 5px 10px;font-size:13px;border-radius:9px;background-color:rgba(255,255,255,.14);color:#fff;border:0}
 header select.emp option{color:#000}
 header svg.ic{width:26px;height:26px}
-main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
+main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto;min-height:100vh}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
 nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:10px;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav button.on{color:var(--tx);font-weight:600}
@@ -211,7 +211,7 @@ const nomEmp = id => S.empleados.find(e=>e.id===id)?.nombre || '';
 const obraOpts = (sel, blank='') => `<option value="">${blank}</option>` + S.obras.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${esc(o.nombre)}${o.estado!=='activa'?' ('+STATUS_LBL[o.estado]+')':''}</option>`).join('');
 
 const S = {
-  obras:[], gastos:[], borradores:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[], presupuestos:[], adicionales:[], cobros:[], bobra:null,
+  obras:[], gastos:[], borradores:[], notas:[], empleados:[], asistencia:[], adelantos:[], pagos:[], suplidores:[], partidas:[], tareas:[], presupuestos:[], adicionales:[], cobros:[], presPers:[], bobra:null, hv:'company', cat:'proyecto', catPer:'mes',
   tab:'inicio', sub:'asistencia', db:'suplidores', listo:false,
   f:{tipo:'',obra:'',desde:'',hasta:'',q:''},
   fn:'todas', qs:'', calMes:hoy().slice(0,7), nd:sumaDias(hoy(),-6), nh:hoy(),
@@ -247,7 +247,7 @@ async function cambiarEmp(v){ S.emp=v; try{localStorage.setItem('cms_emp',v)}cat
 const gId=id=>S.gastos.find(x=>x.id===id)||S.borradores.find(x=>x.id===id);
 const divisionDe=g=>g.division||((g.tipo==='obra'||g.obra_id)?'Constructora':'Distribuidora');
 async function cargar(){
-  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas',presupuestos:'presupuestos',adicionales:'adicionales',cobros:'cobros'};
+  const tablas = {obras:'obras',gastos:'gastos',notas:'notas',empleados:'empleados',asistencia:'asistencia',adelantos:'adelantos',pagos:'pagos_nomina',suplidores:'suplidores',partidas:'partidas',tareas:'tareas',presupuestos:'presupuestos',adicionales:'adicionales',cobros:'cobros',presPers:'presupuesto_personal'};
   const keys = Object.keys(tablas);
   const res = await Promise.all(keys.map(k => sb.from(tablas[k]).select('*').range(0,9999)));
   for(let i=0;i<keys.length;i++){
@@ -261,6 +261,7 @@ async function cargar(){
   S.tareas=S.tareas.filter(x=>idn.has(x.nota_id));
   const ido=new Set(S.obras.map(o=>o.id));
   for(const k of ['presupuestos','adicionales','cobros']) S[k]=S[k].filter(x=>ido.has(x.obra_id));
+  S.presPers=S.presPers.filter(delaEmp);
   S.adicionales.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
   S.cobros.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
   pintarEmp();
@@ -323,53 +324,134 @@ function preguntar(msg, si='Yes', no='No'){
 }
 
 /* ---------- Home ---------- */
+const PAL=['#8EC5FC','#A8E6CF','#FFD3A5','#C3B1E1','#9EE6E0','#FFB3B3','#F9E79F','#B5C7ED','#F7C6E0','#C5E1A5'];
+const GRIS='#D5D9DD';
+const enPersonal=()=>S.tab==='inicio'&&S.hv==='personal';
+function setHv(k){ S.hv=k; render(); }
 function lineasMes(){
   const m = hoy().slice(0,7);
   const gm = S.gastos.filter(g=>g.fecha?.startsWith(m));
   const obraM = sum(gm.filter(g=>g.tipo==='obra'),g=>g.monto_total);
-  const persM = sum(gm.filter(g=>g.tipo==='personal'),g=>g.monto_total);
   const nomM = sum(S.pagos.filter(p=>p.fecha_pago?.startsWith(m)),p=>p.neto);
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
   const lineas=[...filas.map(f=>({id:f.o.id,n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01'})`})),
-    {n:'Personal',v:persM,click:`verGastos({tipo:'personal',desde:'${m}-01'})`},
     {n:'Payroll',v:nomM,click:`S.sub='pagos';ir('nomina')`}].sort((a,b)=>a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
   if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01'})`});
-  const PAL=['#8EC5FC','#A8E6CF','#FFD3A5','#C3B1E1','#9EE6E0','#FFB3B3','#F9E79F','#B5C7ED','#F7C6E0','#C5E1A5'];
-  lineas.forEach((l,i)=>l.c=l.n.startsWith('<i>')?'#D5D9DD':PAL[i%PAL.length]);
-  return {m,obraM,persM,nomM,lineas};
+  lineas.forEach((l,i)=>l.c=l.n.startsWith('<i>')?GRIS:PAL[i%PAL.length]);
+  return {m,obraM,nomM,lineas};
 }
-const colorObra=id=>lineasMes().lineas.find(l=>l.id===id)?.c||'#D5D9DD';
-function vInicio(){
-  const {m,obraM,persM,nomM,lineas}=lineasMes();
-  const totM=obraM+persM+nomM, n=lineas.length;
+const colorObra=id=>lineasMes().lineas.find(l=>l.id===id)?.c||GRIS;
+const limpiar=t=>t.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+/* Donut with equal-size segments (name + amount inside each) */
+function donaIgual(lineas,totTxt){
+  const n=lineas.length; if(!n) return '<div class="empty">No expenses this month.</div>';
   const fsMax=n<=4?4.2:n<=6?3.7:n<=8?3.3:2.9, R1=49, R0=22, RM=(R1+R0)/2+1, W=24;
   const pt=(r,a)=>[(50+r*Math.cos(a)).toFixed(2),(50+r*Math.sin(a)).toFixed(2)];
   const partir=(t,mc)=>{ if(t.length<=mc) return [t]; const w=t.split(' '); let l1=''; while(w.length&&(l1+' '+w[0]).trim().length<=mc) l1=(l1+' '+w.shift()).trim(); return l1?[l1,w.join(' ')]:[t]; };
   const ajustar=t=>{ for(let f=fsMax;f>=2;f-=0.2){ const mc=Math.floor(W/(f*0.56)), ls=partir(t,mc); if(ls.length<=2&&ls.every(x=>x.length<=mc)) return {f,ls}; }
     const mc=Math.floor(W/(2*0.56)); return {f:2,ls:partir(t,mc).map(x=>x.length>mc?x.slice(0,mc-1)+'…':x).slice(0,2)}; };
   const segs=lineas.map((l,i)=>{
-    const a0=-Math.PI/2+i*2*Math.PI/n, a1=-Math.PI/2+(i+1)*2*Math.PI/n, am=(a0+a1)/2, g=0.012;
+    const a0=-Math.PI/2+i*2*Math.PI/n, a1=-Math.PI/2+(i+1)*2*Math.PI/n, am=n===1?-Math.PI/2:(a0+a1)/2, g=0.012;
     const [x1,y1]=pt(R1,a0+g),[x2,y2]=pt(R1,a1-g),[x3,y3]=pt(R0,a1-g),[x4,y4]=pt(R0,a0+g), big=(a1-a0)>Math.PI?1:0;
-    const [tx,ty]=pt(RM,am), nom=l.n.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+    const [tx,ty]=pt(RM,am), nom=limpiar(l.n);
     const {f,ls}=ajustar(nom), amt='RD$ '+fmtN(l.v), fa=Math.min(fsMax,W/(amt.length*0.56));
     const rows=[...ls.map(t=>({t,f,b:0})),{t:amt,f:fa,b:1}], tot=rows.reduce((q,r)=>q+r.f*1.2,0);
     let yy=ty-tot/2; const tsp=rows.map(r=>{ yy+=r.f*1.2; return `<tspan x="${tx}" y="${(yy-r.f*0.25).toFixed(2)}" font-size="${r.f.toFixed(2)}"${r.b?' font-weight="700"':''}>${esc(r.t)}</tspan>`; }).join('');
-    return `<g onclick="${l.click}" style="cursor:pointer"><path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/><text text-anchor="middle" fill="#1f2328" style="pointer-events:none">${tsp}</text></g>`;
+    const forma=n===1?`<circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="${l.c}" stroke-width="${R1-R0}"/>`:`<path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/>`;
+    return `<g onclick="${l.click||''}" style="cursor:pointer">${forma}<text text-anchor="middle" fill="#1f2328" style="pointer-events:none">${tsp}</text></g>`;
   }).join('');
-  const tt='RD$ '+fmtN(totM), tfs=Math.min(4.8,40/(tt.length*0.58));
-  const dona=`<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>`;
-  return `
-  <div class="card"><div class="h"><h2>Monthly balance</h2></div>
-  ${dona}
-  </div>
-  <div class="homebtns">
+  const tt='RD$ '+fmtN(totTxt), tfs=Math.min(4.8,40/(tt.length*0.58));
+  return `<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>`;
+}
+/* Donut proportional to spending, with a legend below */
+function donaProp(lineas){
+  const ls=lineas.filter(l=>l.v>0).sort((a,b)=>b.v-a.v), tot=sum(ls,l=>l.v);
+  if(!tot) return '<div class="empty">No expenses in this period.</div>';
+  ls.forEach((l,i)=>{ l.c=l.c||PAL[i%PAL.length]; });
+  const R1=49,R0=22,RM=35.5, pt=(r,a)=>[(50+r*Math.cos(a)).toFixed(2),(50+r*Math.sin(a)).toFixed(2)];
+  let ang=-Math.PI/2;
+  const segs=ls.map(l=>{
+    const sh=l.v/tot, a0=ang, a1=ang+sh*2*Math.PI, am=(a0+a1)/2; ang=a1; const g=ls.length>1?0.012:0;
+    const [x1,y1]=pt(R1,a0+g),[x2,y2]=pt(R1,a1-g),[x3,y3]=pt(R0,a1-g),[x4,y4]=pt(R0,a0+g), big=(a1-a0)>Math.PI?1:0;
+    const forma=ls.length===1?`<circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="${l.c}" stroke-width="${R1-R0}"/>`:`<path d="M${x1} ${y1}A${R1} ${R1} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${R0} ${R0} 0 ${big} 0 ${x4} ${y4}Z" fill="${l.c}"/>`;
+    let txt=''; if(sh>=0.09){ const [tx,ty]=pt(RM,ls.length===1?-Math.PI/2:am), nm=limpiar(l.n), nm2=nm.length>9?nm.slice(0,8)+'…':nm;
+      txt=`<text text-anchor="middle" fill="#1f2328" font-size="3.1" style="pointer-events:none"><tspan x="${tx}" y="${(ty-0.4).toFixed(2)}">${esc(nm2)}</tspan><tspan x="${tx}" y="${(+ty+3.4).toFixed(2)}" font-weight="700">${Math.round(sh*100)}%</tspan></text>`; }
+    return forma+txt;
+  }).join('');
+  const tt='RD$ '+fmtN(tot), tfs=Math.min(4.6,40/(tt.length*0.58));
+  return `<div style="display:flex;justify-content:center;margin:4px 0"><svg viewBox="0 0 100 100" style="width:100%;max-width:440px"><circle cx="50" cy="50" r="${(R1+R0)/2}" fill="none" stroke="#eceef0" stroke-width="${R1-R0}"/>${segs}<text x="50" y="47" text-anchor="middle" font-size="3.6" fill="#8a9097">Total</text><text x="50" y="${47+tfs+1.4}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#1f2328">${tt}</text></svg></div>
+  <table>${ls.map(l=>`<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${l.c};margin-right:8px"></span>${esc(limpiar(l.n))}</td><td class="n">${fmtA(l.v)}</td><td style="text-align:right;width:46px;color:var(--mut)">${Math.round(l.v/tot*100)}%</td></tr>`).join('')}</table>`;
+}
+function homeBtns(){
+  return `<div class="homebtns">
     <div class="it"><label class="fab" aria-label="Scan invoice">${ic('scan',24)}<input type="file" accept="image/*" hidden onchange="escanearHome(this)"></label>Scan</div>
     <div class="it"><button class="fab big" onclick="formGasto()" aria-label="New expense">${ic('plus',28)}</button>New</div>
     <div class="it"><label class="fab" aria-label="Scan multiple">${ic('scanmulti',24)}<input type="file" accept="image/*" multiple hidden onchange="escanearVarias(this)"></label>Scan multiple</div>
   </div>
-  ${S.borradores.length?`<div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button></div>`:''}
-  <div style="margin-top:18px">${homeBudgets()}</div>`;
+  ${S.borradores.length?`<div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button></div>`:''}`;
+}
+function vInicio(){
+  return seg([['company','Company'],['personal','Personal']],S.hv||'company','setHv')+(S.hv==='personal'?vPersonal():vCompany());
+}
+function vCompany(){
+  const {obraM,nomM,lineas}=lineasMes();
+  return `<div class="card"><div class="h"><h2>Monthly balance</h2></div>${donaIgual(lineas,obraM+nomM)}</div>
+  ${homeBtns()}
+  <div style="margin-top:18px">${homeBudgets()}</div>
+  ${cardCategorias()}`;
+}
+function rangoCat(){
+  const d=new Date(), k=S.catPer||'mes';
+  if(k==='pasado') return [ymd(new Date(d.getFullYear(),d.getMonth()-1,1)), ymd(new Date(d.getFullYear(),d.getMonth(),0))];
+  if(k==='anio') return [d.getFullYear()+'-01-01', hoy()];
+  return [ymd(new Date(d.getFullYear(),d.getMonth(),1)), hoy()];
+}
+function setCatPer(k){ S.catPer=k; render(); }
+function cardCategorias(){
+  const [d1,d2]=rangoCat();
+  const g={}; S.gastos.filter(x=>x.tipo==='obra'&&enRango(x.fecha,d1,d2)).forEach(x=>{ const k=x.partida||'Sin categoría'; g[k]=(g[k]||0)+Number(x.monto_total||0); });
+  const lineas=Object.entries(g).map(([n,v])=>({n:esc(n),v,c:n==='Sin categoría'?GRIS:null}));
+  lineas.push({n:'Payroll',v:sum(S.pagos.filter(p=>enRango(p.fecha_pago,d1,d2)),p=>p.neto)});
+  return `<div class="card" style="margin-top:14px"><div class="h"><h2>Spending by category</h2></div>
+    ${seg([['mes','This month'],['pasado','Last month'],['anio','This year']],S.catPer||'mes','setCatPer')}
+    <div style="height:8px"></div>${donaProp(lineas)}</div>`;
+}
+function lineasPers(m){
+  const g={}; S.gastos.filter(x=>x.tipo==='personal'&&x.fecha?.startsWith(m)).forEach(x=>{ const k=x.partida||'Sin categoría'; g[k]=(g[k]||0)+Number(x.monto_total||0); });
+  const ls=Object.entries(g).map(([n,v])=>({n:esc(n),v,click:`verGastos({tipo:'personal',desde:'${m}-01'})`})).sort((a,b)=>(a.n==='Sin categoría')-(b.n==='Sin categoría')||a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
+  ls.forEach((l,i)=>l.c=l.n==='Sin categoría'?GRIS:PAL[i%PAL.length]);
+  return ls;
+}
+function vPersonal(){
+  const m=hoy().slice(0,7), ls=lineasPers(m), tot=sum(ls,l=>l.v);
+  const bp=Object.fromEntries(S.presPers.map(p=>[p.partida,Number(p.monto)||0]));
+  const gp=Object.fromEntries(ls.map(l=>[limpiar(l.n),l.v]));
+  const names=[...new Set([...Object.keys(bp),...Object.keys(gp)])].sort((a,b)=>(a==='Sin categoría')-(b==='Sin categoría')||a.localeCompare(b,'es',{sensitivity:'base'}));
+  const totB=sum(Object.values(bp),x=>x), pT=totB>0?tot/totB*100:(tot>0?101:0);
+  const fila=n=>{ const g=gp[n]||0,b=bp[n]||0,p=b>0?g/b*100:(g>0?101:0);
+    return `<div style="margin-bottom:10px"><div class="item" style="padding:0"><div class="t" style="font-size:14px">${esc(n)}</div><div class="s">${b>0?fmt(g)+' / '+fmt(b):fmt(g)}</div></div>${barra(p,null,8)}</div>`; };
+  const titulo=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  return `<div class="card"><div class="h"><h2>Personal · ${titulo}</h2></div>${donaIgual(ls,tot)}</div>
+  ${homeBtns()}
+  <div class="card" style="margin-top:18px"><div class="h"><h2>Personal budget (monthly)</h2><button class="btn sm" onclick="formPresPers()">${totB>0?'Edit':'Set budget'}</button></div>
+    ${totB>0?`<div class="item" style="padding:0"><div class="s">${fmt(tot)} of ${fmt(totB)}</div><div class="amt" style="color:${colorPct(pT)}">${Math.round(pT)}%</div></div>${barra(pT,null,14)}<div style="height:10px"></div>`:''}
+    ${names.map(fila).join('')||'<div class="empty">No budget set. Tap Set budget.</div>'}
+  </div>`;
+}
+function formPresPers(){
+  const bp=Object.fromEntries(S.presPers.map(p=>[p.partida,p.monto]));
+  S.ppNames=[...new Set([...S.partidas.filter(p=>p.tipo==='personal').map(p=>p.nombre),...Object.keys(bp)])].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+  abrir(`<h2>Personal budget (monthly)</h2>
+  ${S.ppNames.map((n,i)=>`<label>${esc(n)}</label><input id="pp_${i}" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(bp[n])}">`).join('')||'<div class="empty">Add personal categories first: menu → Database → Categories → Personal.</div>'}
+  <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancel</button><button class="btn" onclick="guardarPresPers()">Save</button></div>`);
+}
+async function guardarPresPers(){
+  const filas=[],vacias=[];
+  S.ppNames.forEach((n,i)=>{ const v=r2(pf($('#pp_'+i).value)); if(v>0) filas.push({empresa:S.emp,partida:n,monto:v}); else vacias.push(n); });
+  if(filas.length){ const {error}=await sb.from('presupuesto_personal').upsert(filas,{onConflict:'empresa,partida'}); if(error) return toast('Error: '+error.message); }
+  if(vacias.length){ const {error}=await sb.from('presupuesto_personal').delete().eq('empresa',S.emp).in('partida',vacias); if(error) return toast('Error: '+error.message); }
+  cerrar(); await cargar(); toast('Saved');
 }
 function verGastos(f){ S.f={tipo:'',obra:'',desde:'',hasta:'',q:'',...f}; ir('gastos'); }
 
@@ -408,9 +490,11 @@ function listaGastos(){
     <div class="amt">${fmt(g.monto_total)}${Number(g.itbis)?`<div class="s">ITBIS ${fmt(g.itbis)}</div>`:''}${Number(g.propina)?`<div class="s">Tip ${fmt(g.propina)}</div>`:''}</div>
   </div>`).join('') || '<div class="empty">No expenses match these filters.</div>';
 }
+const catsDe=(tipo,extra)=>{ const n=S.partidas.filter(p=>catTipo(p)===(tipo==='personal'?'personal':'proyecto')).map(p=>p.nombre); if(extra&&!n.includes(extra)) n.push(extra); return n; };
+function catSel(){ const sel=$('#g_part'), cur=sel.value, n=catsDe($('#g_tipo').value,''); sel.innerHTML='<option value=""></option>'+n.map(p=>`<option ${p===cur?'selected':''}>${esc(p)}</option>`).join(''); }
 function formGasto(id){
-  const g = gId(id) || {fecha:hoy(), tipo:S.f.tipo||'obra', obra_id:S.f.obra||'', metodo_pago:'', fotos:[]};
-  const pn = S.partidas.map(p=>p.nombre); if(g.partida && !pn.includes(g.partida)) pn.push(g.partida);
+  const g = gId(id) || {fecha:hoy(), tipo:enPersonal()?'personal':(S.f.tipo||'obra'), obra_id:S.f.obra||'', metodo_pago:'', fotos:[]};
+  const pn = catsDe(g.tipo,g.partida);
   const mets = [...METHODS]; if(g.metodo_pago && !mets.includes(g.metodo_pago)) mets.push(g.metodo_pago);
   const lleva = !id || Number(g.itbis)>0;
   const otro = !g.suplidor_id && !!g.suplidor;
@@ -420,7 +504,7 @@ function formGasto(id){
   <span id="s_scan" class="s"></span>
   <div class="row">
     <div><label>Date</label><input type="date" id="g_fecha" value="${g.fecha}"></div>
-    <div><label>Type</label><select id="g_tipo" onchange="$('#g_obraw').hidden=this.value!=='obra'"><option value="obra" ${g.tipo==='obra'?'selected':''}>Project</option><option value="personal" ${g.tipo==='personal'?'selected':''}>Personal</option></select></div>
+    <div><label>Type</label><select id="g_tipo" onchange="$('#g_obraw').hidden=this.value!=='obra';catSel()"><option value="obra" ${g.tipo==='obra'?'selected':''}>Project</option><option value="personal" ${g.tipo==='personal'?'selected':''}>Personal</option></select></div>
   </div>
   <div id="g_obraw" ${g.tipo!=='obra'?'hidden':''}><label>Project</label><select id="g_obra">${obraOpts(g.obra_id)}</select></div>
   <label>Description</label><input id="g_desc" value="${esc(g.descripcion)}">
@@ -501,11 +585,11 @@ async function borradorDe(f){
   const m=montosDe(d), rnc=String(d.rnc||'').replace(/[^0-9]/g,''), nom=String(d.suplidor||'').trim();
   const s=S.suplidores.find(x=>rnc&&String(x.documento||'').replace(/[^0-9]/g,'')===rnc)||S.suplidores.find(x=>nom&&x.nombre.toLowerCase()===nom.toLowerCase());
   let ds=String(d.descripcion||'').trim(); if(ds.length>40) ds=ds.slice(0,40).replace(/\s+\S*$/,'');
-  const row={fecha:/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||'')?d.fecha:hoy(), tipo:'obra', obra_id:null, descripcion:ds,
+  const row={fecha:/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||'')?d.fecha:hoy(), tipo:enPersonal()?'personal':'obra', obra_id:null, descripcion:ds,
     suplidor:s?s.nombre:nom, suplidor_id:s?s.id:null, rnc:s?(String(s.documento||'').replace(/[^A-Za-z0-9]/g,'')||rnc):rnc,
     ncf:String(d.ncf||'').toUpperCase().replace(/[^A-Z0-9]/g,''), partida:'', metodo_pago:'',
     monto_sin_itbis:m.sin, itbis:m.it, propina:m.pr, monto_total:m.tot, fotos:[path], borrador:true, empresa:S.emp,
-    division:S.emp==='diagus'?'Constructora':null};
+    division:S.emp==='diagus'?(enPersonal()?'Distribuidora':'Constructora'):null};
   const {error}=await sb.from('gastos').insert(row);
   if(error) throw error;
   return ok;
@@ -1156,18 +1240,23 @@ function formObra(id){
 }
 
 /* Categories */
+const catTipo=p=>p.tipo==='personal'?'personal':'proyecto';
+function setCat(k){ S.cat=k; render(); }
+const PERS_START=['Supermercado','Alquiler','Luz','Ocio','Comida diaria','Ropa'];
 function vPartidas(){
-  return `<div class="card"><div class="row">
+  const t=S.cat||'proyecto', lista=S.partidas.filter(p=>catTipo(p)===t);
+  return seg([['proyecto','Projects'],['personal','Personal']],t,'setCat')+`<div style="height:8px"></div>
+  <div class="card"><div class="row">
     <input id="p_nueva" placeholder="New category" onkeydown="if(event.key==='Enter')agregarPartida()">
     <button class="btn sm" onclick="agregarPartida()">Add</button></div></div>
-  ${S.partidas.map(p=>`<div class="card item">
+  ${lista.map(p=>`<div class="card item">
     <div onclick="renombrarPartida('${p.id}')" style="flex:1"><div class="t">${esc(p.nombre)}</div><div class="s">${S.gastos.filter(g=>g.partida===p.nombre).length} expenses · tap to rename</div></div>
     <button class="btn sm bad" onclick="borrarPartida('${p.id}')">Delete</button></div>`).join('')
   || `<div class="empty">No categories yet.<br><br><button class="btn sec" onclick="partidasSugeridas()">Add a starter list</button></div>`}`;
 }
 async function agregarPartida(){
   const nombre=$('#p_nueva').value.trim(); if(!nombre) return;
-  const {error}=await sb.from('partidas').insert({nombre,empresa:S.emp});
+  const {error}=await sb.from('partidas').insert({nombre,empresa:S.emp,tipo:S.cat||'proyecto'});
   if(error) return toast(error.code==='23505'?'That category already exists':'Error: '+error.message);
   await cargar(); toast('Category added');
 }
@@ -1189,7 +1278,7 @@ async function borrarPartida(id){
   await cargar(); toast('Category deleted');
 }
 async function partidasSugeridas(){
-  const {error}=await sb.from('partidas').insert(CATEGORIES_START.map(nombre=>({nombre,empresa:S.emp})));
+  const pers=(S.cat==='personal'); const {error}=await sb.from('partidas').insert((pers?PERS_START:CATEGORIES_START).map(nombre=>({nombre,empresa:S.emp,tipo:pers?'personal':'proyecto'})));
   if(error) return toast('Error: '+error.message);
   await cargar(); toast('Categories added');
 }
@@ -1239,7 +1328,7 @@ function vBudgets(){
   const names=[...new Set([...Object.keys(pres),...Object.keys(gp)])].sort((a,b)=>a.localeCompare(b));
   const filaCat=(n,g,b)=>{ const p=b>0?g/b*100:(g>0?101:0);
     return `<div style="margin-bottom:12px"><div class="item" style="padding:0"><div class="t" style="font-size:14px">${esc(n)}</div><div class="s">${b>0?fmt(g)+' / '+fmt(b):fmt(g)+(g>0?' · no budget':'')}</div></div>${barra(p,null,6)}${b>0?`<div class="s" style="margin-top:3px">${b-g>=0?'Available '+fmt(b-g):'Over by '+fmt(g-b)}</div>`:''}</div>`; };
-  const cobPct=r.total>0?r.cob/r.total*100:0;
+  const cli=Number(o.precio_cliente)||0, contrato=cli>0?cli+r.adic:r.total, cobPct=contrato>0?r.cob/contrato*100:0;
   return `<div class="h"><button class="btn sm sec" onclick="S.bobra=null;render()">← Budgets</button><button class="btn sm" onclick="formPresupuesto('${o.id}')">${r.base>0?'Edit budget':'Set budget'}</button></div>
   <div class="card">
     <div class="item" style="padding:0"><div><div class="t" style="font-size:17px">${esc(o.nombre)}</div><div class="s"><span class="tag ${o.estado==='activa'?'d':'p'}">${STATUS_LBL[o.estado]||o.estado}</span></div></div>
@@ -1258,14 +1347,22 @@ function vBudgets(){
     ${sinCat>0?filaCat('Sin categoría',sinCat,0):''}
     ${!names.length&&!sinCat?'<div class="empty">No budget or expenses yet.</div>':''}
   </div>
+  ${cli>0?`<div class="card"><div class="h"><h2>Profit</h2></div><table>
+    <tr><td>Contract (client price + adicionales)</td><td class="n">${fmtA(contrato)}</td></tr>
+    <tr><td>Cost budget (incl. adicionales)</td><td class="n">${fmtA(r.total)}</td></tr>
+    <tr class="tot"><td>Expected profit</td><td class="n">${fmtA(contrato-r.total)}</td></tr>
+    <tr><td>Collected so far</td><td class="n">${fmtA(r.cob)}</td></tr>
+    <tr><td>Spent so far</td><td class="n">${fmtA(r.gast)}</td></tr>
+    <tr class="tot"><td>Profit to date</td><td class="n">${fmtA(r.cob-r.gast)}</td></tr></table>
+    <div class="s" style="margin-top:6px">Profit to date = collected minus spent (cash basis).</div></div>`:''}
   <div class="card"><div class="h"><h2>Adicionales</h2><button class="btn sm" onclick="formAdic('${o.id}')">+ Add</button></div>
     ${adicObra(o.id).map(a=>`<div class="item" onclick="formAdic('${o.id}','${a.id}')"><div><div class="t">${esc(a.descripcion||'Adicional')}</div><div class="s">${fecha(a.fecha)}</div></div><div class="amt">${fmt(a.monto)}</div></div>`).join('')||'<div class="empty">No adicionales.</div>'}
   </div>
   <div class="card"><div class="h"><h2>Cobros</h2><button class="btn sm" onclick="formCobro('${o.id}')">+ Add payment</button></div>
     <table>
-      <tr><td>Total budget</td><td class="n">${fmtA(r.total)}</td></tr>
+      <tr><td>${cli>0?'Contract (client)':'Total budget'}</td><td class="n">${fmtA(contrato)}</td></tr>
       <tr><td>Collected</td><td class="n">${fmtA(r.cob)}</td></tr>
-      <tr class="tot"><td>${r.total-r.cob>=0?'Pending to collect':'Collected over budget'}</td><td class="n">${fmtA(Math.abs(r.total-r.cob))}</td></tr>
+      <tr class="tot"><td>${contrato-r.cob>=0?'Pending to collect':'Collected over contract'}</td><td class="n">${fmtA(Math.abs(contrato-r.cob))}</td></tr>
     </table>
     ${barra(cobPct,'linear-gradient(90deg,#d9f2cf,#a8dc9a)',10)}
     <div style="margin-top:10px">
@@ -1278,7 +1375,8 @@ function formPresupuesto(oid){
   const o=S.obras.find(x=>x.id===oid), cur=Object.fromEntries(presObra(oid).map(p=>[p.partida,p.monto]));
   S.pbNames=[...new Set([...S.partidas.map(p=>p.nombre),...Object.keys(cur),...S.gastos.filter(g=>g.obra_id===oid&&g.partida).map(g=>g.partida)])].sort((a,b)=>a.localeCompare(b));
   abrir(`<h2>Budget · ${esc(o.nombre)}</h2>
-  <div class="card" style="margin:8px 0"><div class="item" style="padding:0"><div class="t">Original budget</div><div class="amt" id="pb_tot">${fmt(sum(presObra(oid),p=>p.monto))}</div></div></div>
+  <label>Client price (quoted to the client)</label><input id="pb_cli" class="mny" type="text" inputmode="decimal" onfocus="unfm(this)" onblur="fm(this)" value="${fv(Number(o.precio_cliente)||'')}">
+  <div class="card" style="margin:8px 0"><div class="item" style="padding:0"><div class="t">Original budget (your cost)</div><div class="amt" id="pb_tot">${fmt(sum(presObra(oid),p=>p.monto))}</div></div></div>
   ${S.pbNames.map((n,i)=>`<label>${esc(n)}</label><input id="pb_${i}" type="number" inputmode="decimal" step="0.01" value="${cur[n]||''}" oninput="pbTot()">`).join('')||'<div class="empty">Add categories in Database first.</div>'}
   <div class="row" style="margin-top:16px"><button class="btn sec" onclick="cerrar()">Cancel</button><button class="btn" onclick="guardarPresupuesto('${oid}')">Save</button></div>`);
 }
@@ -1287,6 +1385,8 @@ async function guardarPresupuesto(oid){
   S.pbNames.forEach((n,i)=>{ const v=r2(parseFloat($('#pb_'+i).value)||0); (v>0?filas:vacias).push(v>0?{obra_id:oid,partida:n,monto:v}:n); });
   if(filas.length){ const {error}=await sb.from('presupuestos').upsert(filas,{onConflict:'obra_id,partida'}); if(error) return toast('Error: '+error.message); }
   if(vacias.length){ const {error}=await sb.from('presupuestos').delete().eq('obra_id',oid).in('partida',vacias); if(error) return toast('Error: '+error.message); }
+  const o=S.obras.find(x=>x.id===oid), cli=r2(pf($('#pb_cli').value));
+  if(cli!==(Number(o.precio_cliente)||0)){ const {error}=await sb.from('obras').update({precio_cliente:cli||null}).eq('id',oid); if(error) return toast('Error: '+error.message); }
   cerrar(); await cargar(); toast('Saved');
 }
 function formAdic(oid,id){
