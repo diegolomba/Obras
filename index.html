@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2e3236">
 <title>CMS</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -129,7 +131,7 @@ tr.tot td{border-top:2px solid var(--tx);font-weight:700}
 
 <div id="app" hidden>
   <header>
-    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><h1>CMS</h1><select class="emp" id="b_emp" onchange="cambiarEmp(this.value)"></select></div>
+    <div class="izq"><button onclick="menu()" aria-label="Menu" id="b_menu"></button><button onclick="ir('inicio')" aria-label="Home" class="logo" style="gap:8px;padding:4px 6px"><svg viewBox="0 0 84 66" width="30" height="24" aria-hidden="true"><rect x="2" y="24" width="20" height="34" rx="4" fill="#8EC5FC"/><rect x="28" y="2" width="20" height="56" rx="4" fill="#A8E6CF"/><rect x="54" y="14" width="20" height="44" rx="4" fill="#FFD3A5"/><rect x="0" y="62" width="78" height="4" rx="2" fill="#fff"/></svg><h1>CMS</h1></button><select class="emp" id="b_emp" onchange="cambiarEmp(this.value)"></select></div>
     <div class="izq"><button onclick="atras()" aria-label="Back" id="b_back"></button><button onclick="recargar()" aria-label="Refresh" id="b_ref"></button></div>
   </header>
   <main id="view"><div class="empty">Loading…</div></main>
