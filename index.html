@@ -328,16 +328,21 @@ const PAL=['#8EC5FC','#A8E6CF','#FFD3A5','#C3B1E1','#9EE6E0','#FFB3B3','#F9E79F'
 const GRIS='#D5D9DD';
 const enPersonal=()=>S.tab==='inicio'&&S.hv==='personal';
 function setHv(k){ S.hv=k; render(); }
+const mesVista=()=>S.hm||hoy().slice(0,7);
+const finMes=m=>{ const [y,mm]=m.split('-').map(Number); return ymd(new Date(y,mm,0)); };
+const tituloMes=m=>{ const [y,mm]=m.split('-').map(Number); return new Date(y,mm-1,15).toLocaleDateString('en-US',{month:'long',year:'numeric'}); };
+function mesHome(k){ const [y,mm]=mesVista().split('-').map(Number); const n=ymd(new Date(y,mm-1+k,1)).slice(0,7); S.hm=(n>=hoy().slice(0,7))?'':n; render(); }
+const navMes=(t)=>`<div class="h"><button class="btn sm sec" onclick="mesHome(-1)">‹</button><div style="text-align:center"><h2>${t}</h2><div class="s">${tituloMes(mesVista())}</div></div><button class="btn sm sec" onclick="mesHome(1)" ${S.hm?'':'disabled'}>›</button></div>`;
 function lineasMes(){
-  const m = hoy().slice(0,7);
+  const m = mesVista();
   const gm = S.gastos.filter(g=>g.fecha?.startsWith(m));
   const obraM = sum(gm.filter(g=>g.tipo==='obra'),g=>g.monto_total);
   const nomM = sum(S.pagos.filter(p=>p.fecha_pago?.startsWith(m)),p=>p.neto);
   const filas = S.obras.map(o=>({o, g:sum(gm.filter(x=>x.obra_id===o.id),x=>x.monto_total)})).filter(f=>f.o.estado==='activa'||f.g);
   const sinObra = sum(gm.filter(g=>g.tipo==='obra'&&!g.obra_id),g=>g.monto_total);
-  const lineas=[...filas.map(f=>({id:f.o.id,n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01'})`})),
+  const lineas=[...filas.map(f=>({id:f.o.id,n:esc(f.o.nombre),v:f.g,click:`verGastos({obra:'${f.o.id}',desde:'${m}-01',hasta:'${finMes(m)}'})`})),
     {n:'Payroll',v:nomM,click:`S.sub='pagos';ir('nomina')`}].sort((a,b)=>a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
-  if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01'})`});
+  if(sinObra) lineas.push({n:'<i>Unassigned</i>',v:sinObra,click:`verGastos({tipo:'obra',desde:'${m}-01',hasta:'${finMes(m)}'})`});
   lineas.forEach((l,i)=>l.c=l.n.startsWith('<i>')?GRIS:PAL[i%PAL.length]);
   return {m,obraM,nomM,lineas};
 }
@@ -345,7 +350,7 @@ const colorObra=id=>lineasMes().lineas.find(l=>l.id===id)?.c||GRIS;
 const limpiar=t=>t.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
 /* Donut with equal-size segments (name + amount inside each) */
 function donaIgual(lineas,totTxt){
-  const n=lineas.length; if(!n) return '<div class="empty">No expenses this month.</div>';
+  const n=lineas.length; if(!n) return '<div class="empty">No expenses in this month.</div>';
   const fsMax=n<=4?4.2:n<=6?3.7:n<=8?3.3:2.9, R1=49, R0=22, RM=(R1+R0)/2+1, W=24;
   const pt=(r,a)=>[(50+r*Math.cos(a)).toFixed(2),(50+r*Math.sin(a)).toFixed(2)];
   const partir=(t,mc)=>{ if(t.length<=mc) return [t]; const w=t.split(' '); let l1=''; while(w.length&&(l1+' '+w[0]).trim().length<=mc) l1=(l1+' '+w.shift()).trim(); return l1?[l1,w.join(' ')]:[t]; };
@@ -396,7 +401,7 @@ function vInicio(){
 }
 function vCompany(){
   const {obraM,nomM,lineas}=lineasMes();
-  return `<div class="card"><div class="h"><h2>Monthly balance</h2></div>${donaIgual(lineas,obraM+nomM)}</div>
+  return `<div class="card">${navMes('Monthly balance')}${donaIgual(lineas,obraM+nomM)}</div>
   ${homeBtns()}
   <div style="margin-top:18px">${homeBudgets()}</div>
   ${cardCategorias()}`;
@@ -419,20 +424,19 @@ function cardCategorias(){
 }
 function lineasPers(m){
   const g={}; S.gastos.filter(x=>x.tipo==='personal'&&x.fecha?.startsWith(m)).forEach(x=>{ const k=x.partida||'Sin categoría'; g[k]=(g[k]||0)+Number(x.monto_total||0); });
-  const ls=Object.entries(g).map(([n,v])=>({n:esc(n),v,click:`verGastos({tipo:'personal',desde:'${m}-01'})`})).sort((a,b)=>(a.n==='Sin categoría')-(b.n==='Sin categoría')||a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
+  const ls=Object.entries(g).map(([n,v])=>({n:esc(n),v,click:`verGastos({tipo:'personal',desde:'${m}-01',hasta:'${finMes(m)}'})`})).sort((a,b)=>(a.n==='Sin categoría')-(b.n==='Sin categoría')||a.n.localeCompare(b.n,'es',{sensitivity:'base'}));
   ls.forEach((l,i)=>l.c=l.n==='Sin categoría'?GRIS:PAL[i%PAL.length]);
   return ls;
 }
 function vPersonal(){
-  const m=hoy().slice(0,7), ls=lineasPers(m), tot=sum(ls,l=>l.v);
+  const m=mesVista(), ls=lineasPers(m), tot=sum(ls,l=>l.v);
   const bp=Object.fromEntries(S.presPers.map(p=>[p.partida,Number(p.monto)||0]));
   const gp=Object.fromEntries(ls.map(l=>[limpiar(l.n),l.v]));
   const names=[...new Set([...Object.keys(bp),...Object.keys(gp)])].sort((a,b)=>(a==='Sin categoría')-(b==='Sin categoría')||a.localeCompare(b,'es',{sensitivity:'base'}));
   const totB=sum(Object.values(bp),x=>x), pT=totB>0?tot/totB*100:(tot>0?101:0);
   const fila=n=>{ const g=gp[n]||0,b=bp[n]||0,p=b>0?g/b*100:(g>0?101:0);
     return `<div style="margin-bottom:10px"><div class="item" style="padding:0"><div class="t" style="font-size:14px">${esc(n)}</div><div class="s">${b>0?fmt(g)+' / '+fmt(b):fmt(g)}</div></div>${barra(p,null,8)}</div>`; };
-  const titulo=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  return `<div class="card"><div class="h"><h2>Personal · ${titulo}</h2></div>${donaIgual(ls,tot)}</div>
+  return `<div class="card">${navMes('Personal')}${donaIgual(ls,tot)}</div>
   ${homeBtns()}
   <div class="card" style="margin-top:18px"><div class="h"><h2>Personal budget (monthly)</h2><button class="btn sm" onclick="formPresPers()">${totB>0?'Edit':'Set budget'}</button></div>
     ${totB>0?`<div class="item" style="padding:0"><div class="s">${fmt(tot)} of ${fmt(totB)}</div><div class="amt" style="color:${colorPct(pT)}">${Math.round(pT)}%</div></div>${barra(pT,null,14)}<div style="height:10px"></div>`:''}
@@ -461,6 +465,7 @@ function gastosFiltrados(){
   return S.gastos.filter(g=>(!f.tipo||g.tipo===f.tipo)&&(!f.obra||g.obra_id===f.obra)&&(!f.desde||g.fecha>=f.desde)&&(!f.hasta||g.fecha<=f.hasta)
     &&(!q||[g.descripcion,g.suplidor,g.ncf,g.rnc,g.partida].join(' ').toLowerCase().includes(q)));
 }
+function limpiarFiltros(){ S.f={tipo:'',obra:'',desde:'',hasta:'',q:''}; render(); }
 function setF(k,v){ S.f[k]=v; if(k==='tipo'&&v==='personal') S.f.obra=''; $('#glist').innerHTML=listaGastos(); }
 function vGastos(){
   const f=S.f;
@@ -475,6 +480,7 @@ function vGastos(){
       <div><label>To</label><input type="date" value="${f.hasta}" onchange="setF('hasta',this.value)"></div>
     </div>
     <label>Search</label><input type="search" placeholder="Supplier, NCF, description…" value="${esc(f.q)}" oninput="setF('q',this.value)">
+    ${(f.tipo||f.obra||f.desde||f.hasta||f.q)?`<div style="margin-top:8px"><button class="btn sm sec" onclick="limpiarFiltros()">Clear filters</button></div>`:''}
   </div>
   <div class="row" style="margin-bottom:10px"><button class="btn" onclick="formGasto()">+ New expense</button>${S.borradores.length?`<button class="btn sec" onclick="abrirBorradores()">Drafts (${S.borradores.length})</button>`:''}</div>
   <div class="row" style="margin-bottom:12px"><button class="btn sec" onclick="exportarFiltrado('pdf')">PDF · Internal</button><button class="btn sec" onclick="exportarFiltrado('xlsx')">Excel · Internal</button></div>
@@ -682,15 +688,13 @@ async function guardarGasto(id){
   { const nm=(d.suplidor||'').toLowerCase();
     const dup2=S.gastos.find(g=>g.id!==id&&g.fecha===d.fecha&&r2(g.monto_total)===r2(d.monto_total)&&((d.suplidor_id&&g.suplidor_id===d.suplidor_id)||(nm&&(g.suplidor||'').toLowerCase()===nm)));
     if(dup2 && !confirm(`This looks like a repeated invoice: same supplier, date and amount (${dup2.suplidor||''}, ${fecha(dup2.fecha)}, ${fmt(dup2.monto_total)}). Save anyway?`)) return; }
-  if(!d.suplidor_id && d.rnc && d.suplidor && !S.suplidores.some(x=>alnum(x.documento)===d.rnc)){
-    if(confirm(`The supplier "${d.suplidor}" (RNC ${d.rnc}) is not in your list. Add it?`)){
-      const {data:ns,error:e2}=await sb.from('suplidores').insert({nombre:d.suplidor,tipo:d.rnc.length===9?'empresa':'particular',documento:d.rnc,empresa:S.emp,fotos:[]}).select().single();
-      if(e2) toast('Could not add the supplier: '+e2.message); else d.suplidor_id=ns.id;
-    }
-  }
   const eraBorr=!!gId(id)?.borrador; d.borrador=false;
   await limpiarFotos(gId(id)?.fotos, d.fotos);
-  await guardar('gastos',id,d);
+  const nuevoSup=(!d.suplidor_id && d.rnc && d.suplidor && !S.suplidores.some(x=>alnum(x.documento)===d.rnc) && confirm(`The supplier "${d.suplidor}" (RNC ${d.rnc}) is not in your list. Add it?`));
+  const {error:eg}=id?await sb.from('gastos').update(d).eq('id',id):await sb.from('gastos').insert({...d,empresa:S.emp});
+  if(eg) return toast('Error: '+eg.message);
+  if(nuevoSup){ const {error:e2}=await sb.from('suplidores').insert({nombre:d.suplidor,tipo:d.rnc.length===9?'empresa':'particular',documento:d.rnc,empresa:S.emp,fotos:[]}); if(e2) toast('Saved, but could not add the supplier: '+e2.message); }
+  cerrar(); await cargar(); toast('Saved');
   if(eraBorr && S.borradores.length) abrirBorradores();
 }
 async function borrarGasto(id){
@@ -1117,7 +1121,7 @@ function formSup(id){
     <button class="btn" onclick="guardarSup('${id||''}')">Save</button>
   </div>
   ${gs.length?`<div class="card" style="margin-top:16px"><div class="h"><h2>Recent expenses</h2></div>
-    ${gs.map(g=>`<div class="asis"><div class="nm">${fecha(g.fecha)} · ${esc(g.descripcion||nomObra(g.obra_id)||'')}</div><b>${fmt(g.monto_total)}</b></div>`).join('')}</div>`:''}`);
+    ${gs.map(g=>`<div class="asis" style="cursor:pointer" onclick="formGasto('${g.id}')"><div class="nm">${fecha(g.fecha)} · ${esc(g.descripcion||nomObra(g.obra_id)||'')}</div><b>${fmt(g.monto_total)}</b></div>`).join('')}</div>`:''}`);
   pintarFotos();
 }
 async function guardarSup(id){
